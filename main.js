@@ -3,45 +3,38 @@ import './style.css'
 const games = [
   {
     id: 1,
-    title: 'Ragdoll Archers (Self-Hosted)',
+    title: 'Ragdoll Archers (Self-Hosted Demo)',
     category: 'Action / Ragdoll',
     thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
     url: '/games/demo-game/index.html'
   },
   {
     id: 2,
-    title: 'Neon Strike',
-    category: 'Shooter',
-    thumbnail: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    url: '#'
+    title: '2048',
+    category: 'Puzzle',
+    thumbnail: 'https://images.unsplash.com/photo-1614294148960-9aa740632a87?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    url: '/games/2048/index.html'
   },
   {
     id: 3,
-    title: 'Cyber Racer',
-    category: 'Racing',
-    thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    url: '#'
+    title: 'Hextris',
+    category: 'Puzzle / Arcade',
+    thumbnail: 'https://images.unsplash.com/photo-1614294149010-950b698f72c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    url: '/games/hextris/index.html'
   },
   {
     id: 4,
-    title: 'Stickman Combat',
-    category: 'Action',
+    title: 'Clumsy Bird',
+    category: 'Arcade',
     thumbnail: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    url: '#'
+    url: '/games/clumsy-bird/index.html'
   },
   {
     id: 5,
-    title: 'Gravity Runner',
+    title: 'Tetris',
     category: 'Arcade',
     thumbnail: 'https://images.unsplash.com/photo-1493711662062-fa541abbe5de?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    url: '#'
-  },
-  {
-    id: 6,
-    title: 'Physics Puzzle',
-    category: 'Logic',
-    thumbnail: 'https://images.unsplash.com/photo-1614294149010-950b698f72c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    url: '#'
+    url: '/games/tetris/index.html'
   }
 ];
 
