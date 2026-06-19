@@ -35,6 +35,27 @@ const games = [
     category: 'Arcade',
     thumbnail: 'https://images.unsplash.com/photo-1493711662062-fa541abbe5de?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
     url: '/games/tetris/index.html'
+  },
+  {
+    id: 6,
+    title: 'Ragdoll Archers (Official)',
+    category: 'Action',
+    thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    url: '/play.html?src=https://www.crazygames.com/embed/ragdoll-archers'
+  },
+  {
+    id: 7,
+    title: 'Ragdoll Archers 2',
+    category: 'Action',
+    thumbnail: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    url: '/play.html?src=https://ragdollarchers2.io/'
+  },
+  {
+    id: 8,
+    title: 'Ragdoll Archers Online',
+    category: 'Action',
+    thumbnail: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    url: '/play.html?src=https://ragdollarchersonline.io/'
   }
 ];
 
