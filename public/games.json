@@ -70,13 +70,6 @@
     "url": "/games/drift-hunters/index.html"
   },
   {
-    "id": 11,
-    "title": "Ducklife4",
-    "category": "Arcade",
-    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Ducklife4",
-    "url": "/games/ducklife4/index.html"
-  },
-  {
     "id": 12,
     "title": "Flappy Bird",
     "category": "Arcade",
@@ -152,13 +145,6 @@
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Stickman%20Hook",
     "url": "/games/stickman-hook/index.html"
-  },
-  {
-    "id": 23,
-    "title": "Subway Surfers",
-    "category": "Arcade",
-    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Subway%20Surfers",
-    "url": "/games/subway-surfers/index.html"
   },
   {
     "id": 24,
