@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiplayer Chess (P2P)</title>
+  
+  <!-- Chessboard.js CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" integrity="sha384-q94+BZtLrkL1/ohOuzB04H00A8kqHLawIik1kOypmSrt00iN1PZ4tjzzPjsEitvT" crossorigin="anonymous">
+  
+  <style>
+    :root {
+      --bg-color: #1a1a2e;
+      --text-color: #ffffff;
+      --primary: #00d2ff;
+      --secondary: #7b2ff7;
+      --panel-bg: rgba(0, 0, 0, 0.5);
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    h1 {
+      margin-bottom: 20px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 600px;
+      width: 100%;
+    }
+    
+    .panel {
+      background-color: var(--panel-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .menu {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 210, 255, 0.4);
+    }
+    
+    .btn:disabled {
+      background: #555;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+    
+    input {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 16px;
+      outline: none;
+    }
+    
+    input:focus {
+      border-color: var(--primary);
+    }
+    
+    .hidden { display: none !important; }
+    
+    .status-box {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #feca57;
+    }
+    
+    .code-display {
+      font-size: 24px;
+      font-family: monospace;
+      letter-spacing: 2px;
+      background: rgba(0,0,0,0.8);
+      padding: 10px;
+      border-radius: 6px;
+      color: var(--primary);
+      margin: 10px 0;
+      user-select: all;
+    }
+    
+    #board {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>P2P Multiplayer Chess</h1>
+
+  <div class="container">
+    
+    <!-- Connection Menu -->
+    <div id="menu-panel" class="panel">
+      <p style="margin-bottom: 15px; color: #ccc;">Play directly with a friend using a peer-to-peer connection. No accounts required.</p>
+      
+      <div class="menu">
+        <button id="btn-host" class="btn">Create Game (Play as White)</button>
+        
+        <div style="margin: 10px 0; color: #888;">&mdash; OR &mdash;</div>
+        
+        <div class="input-group">
+          <input type="text" id="input-code" placeholder="Enter Room Code" autocomplete="off">
+          <button id="btn-join" class="btn">Join (Play as Black)</button>
+        </div>
+      </div>
+      
+      <div id="loading-msg" class="hidden" style="margin-top: 15px; color: #feca57;">Connecting...</div>
+    </div>
+
+    <!-- Waiting for Peer (Host only) -->
+    <div id="waiting-panel" class="panel hidden">
+      <h3>Waiting for opponent...</h3>
+      <p style="margin: 10px 0; color: #ccc;">Share this Room Code with your friend:</p>
+      <div id="room-code-display" class="code-display">----</div>
+      <p style="font-size: 14px; color: #888;">(They must enter it in the "Join" box)</p>
+    </div>
+
+    <!-- Game UI -->
+    <div id="game-panel" class="hidden">
+      <div class="panel" style="margin-bottom: 20px;">
+        <div id="status" class="status-box">White to move</div>
+        <div id="connection-status" style="font-size: 14px; color: #2ed573;">Connected.</div>
+      </div>
+      
+      <div id="board"></div>
+    </div>
+
+  </div>
+
+  <!-- Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js" integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3Jv//qFdRZ3Xb85O0xFkRxO/FVT8sJUwsG8SVK5O27/D" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+
+  <script>
+    // Elements
+    const menuPanel = document.getElementById('menu-panel');
+    const waitingPanel = document.getElementById('waiting-panel');
+    const gamePanel = document.getElementById('game-panel');
+    const roomCodeDisplay = document.getElementById('room-code-display');
+    const statusEl = document.getElementById('status');
+    const connStatusEl = document.getElementById('connection-status');
+    
+    // State
+    let board = null;
+    let game = new Chess();
+    let myColor = 'w';
+    let peer = null;
+    let conn = null;
+
+    // Helper: generate short random ID
+    function generateId() {
+      return Math.random().toString(36).substr(2, 5).toUpperCase();
+    }
+
+    function initPeer() {
+      if (!peer) {
+        // Using public PeerJS server
+        peer = new Peer({ debug: 2 });
+        peer.on('error', (err) => {
+          alert("Connection error: " + err.type);
+          resetToMenu();
+        });
+      }
+    }
+
+    // --- Host Logic ---
+    document.getElementById('btn-host').addEventListener('click', () => {
+      document.getElementById('loading-msg').classList.remove('hidden');
+      initPeer();
+      
+      const hostId = "CHESS-" + generateId();
+      
+      // Destroy old peer if re-hosting
+      peer.destroy();
+      peer = new Peer(hostId, { debug: 2 });
+      
+      peer.on('open', (id) => {
+        menuPanel.classList.add('hidden');
+        waitingPanel.classList.remove('hidden');
+        roomCodeDisplay.innerText = id.replace('CHESS-', '');
+      });
+
+      peer.on('connection', (connection) => {
+        conn = connection;
+        setupConnection();
+        startGame('w');
+      });
+      
+      peer.on('error', (err) => {
+        if (err.type === 'unavailable-id') {
+          // rare collision, try again
+          document.getElementById('btn-host').click(); 
+        } else {
+          alert("Host error: " + err.type);
+          resetToMenu();
+        }
+      });
+    });
+
+    // --- Join Logic ---
+    document.getElementById('btn-join').addEventListener('click', () => {
+      const code = document.getElementById('input-code').value.trim().toUpperCase();
+      if (!code) return alert("Please enter a code");
+      
+      document.getElementById('loading-msg').classList.remove('hidden');
+      initPeer();
+
+      // Wait for peer to initialize if it hasn't
+      if (peer.disconnected) peer.reconnect();
+      
+      // If peer is already open, connect immediately
+      if (peer.id) {
+        connectToHost(code);
+      } else {
+        peer.on('open', () => { connectToHost(code); });
+      }
+    });
+
+    function connectToHost(code) {
+      const targetId = "CHESS-" + code;
+      conn = peer.connect(targetId, { reliable: true });
+      
+      conn.on('open', () => {
+        setupConnection();
+        startGame('b');
+      });
+      
+      conn.on('error', (err) => {
+        alert("Failed to join: " + err);
+        resetToMenu();
+      });
+    }
+
+    function setupConnection() {
+      conn.on('data', (data) => {
+        if (data.type === 'move') {
+          game.move(data.move);
+          board.position(game.fen());
+          updateStatus();
+        }
+      });
+      
+      conn.on('close', () => {
+        connStatusEl.innerText = "Opponent disconnected.";
+        connStatusEl.style.color = "#ff4757";
+        board = null; // disable board
+      });
+    }
+
+    function resetToMenu() {
+      menuPanel.classList.remove('hidden');
+      waitingPanel.classList.add('hidden');
+      gamePanel.classList.add('hidden');
+      document.getElementById('loading-msg').classList.add('hidden');
+      if (conn) conn.close();
+      if (peer) { peer.destroy(); peer = null; }
+    }
+
+    // --- Game Logic ---
+    function startGame(color) {
+      myColor = color;
+      menuPanel.classList.add('hidden');
+      waitingPanel.classList.add('hidden');
+      gamePanel.classList.remove('hidden');
+      
+      game.reset();
+
+      const config = {
+        draggable: true,
+        position: 'start',
+        orientation: myColor === 'w' ? 'white' : 'black',
+        onDragStart: onDragStart,
+        onDrop: onDrop,
+        onSnapEnd: onSnapEnd,
+        pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
+      };
+      
+      board = Chessboard('board', config);
+      updateStatus();
+    }
+
+    function onDragStart(source, piece, position, orientation) {
+      if (game.game_over()) return false;
+      
+      // Only pick up your own pieces, and only if it's your turn
+      if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+          (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+        return false;
+      }
+      
+      // Cannot move if it's not your turn
+      if (game.turn() !== myColor) {
+        return false;
+      }
+    }
+
+    function onDrop(source, target) {
+      // see if the move is legal
+      const move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q' // NOTE: always promote to a queen for simplicity
+      });
+
+      // illegal move
+      if (move === null) return 'snapback';
+
+      // Send valid move to peer
+      updateStatus();
+      if (conn && conn.open) {
+        conn.send({ type: 'move', move: move });
+      }
+    }
+
+    // update the board position after the piece snap
+    // for castling, en passant, pawn promotion
+    function onSnapEnd() {
+      board.position(game.fen());
+    }
+
+    function updateStatus() {
+      let statusHTML = '';
+
+      let moveColor = game.turn() === 'w' ? 'White' : 'Black';
+
+      // checkmate?
+      if (game.in_checkmate()) {
+        statusHTML = `Game over, ${moveColor} is in checkmate.`;
+      }
+      // draw?
+      else if (game.in_draw()) {
+        statusHTML = 'Game over, drawn position';
+      }
+      // game still on
+      else {
+        statusHTML = `${moveColor} to move`;
+        if (game.in_check()) {
+          statusHTML += ', ' + moveColor + ' is in check';
+        }
+      }
+
+      statusEl.innerText = statusHTML;
+      
+      if (game.turn() === myColor) {
+        statusEl.style.color = '#2ed573'; // Green for my turn
+      } else {
+        statusEl.style.color = '#feca57'; // Yellow for their turn
+      }
+    }
+
+  </script>
+</body>
+</html>
