@@ -36,139 +36,230 @@
   },
   {
     "id": 6,
+    "title": "A Dance Of Fire And Ice",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=A%20Dance%20Of%20Fire%20And%20Ice",
+    "url": "/games/a-dance-of-fire-and-ice/index.html"
+  },
+  {
+    "id": 7,
+    "title": "Among Us",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Among%20Us",
+    "url": "/games/among-us/index.html"
+  },
+  {
+    "id": 8,
+    "title": "Basketball Stars",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Basketball%20Stars",
+    "url": "/games/basketball-stars/index.html"
+  },
+  {
+    "id": 9,
+    "title": "Boxhead2play",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Boxhead2play",
+    "url": "/games/boxhead2play/index.html"
+  },
+  {
+    "id": 10,
+    "title": "Chess",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Chess",
+    "url": "/games/chess/index.html"
+  },
+  {
+    "id": 11,
+    "title": "Chrome Dino",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Chrome%20Dino",
+    "url": "/games/chrome-dino/index.html"
+  },
+  {
+    "id": 12,
     "title": "Clumsy Bird",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Clumsy%20Bird",
     "url": "/games/clumsy-bird/index.html"
   },
   {
-    "id": 7,
+    "id": 13,
+    "title": "Cookie Clicker",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Cookie%20Clicker",
+    "url": "/games/cookie-clicker/index.html"
+  },
+  {
+    "id": 14,
     "title": "Core Ball",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Core%20Ball",
     "url": "/games/core-ball/index.html"
   },
   {
-    "id": 8,
+    "id": 15,
     "title": "Demo Game",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Demo%20Game",
     "url": "/games/demo-game/index.html"
   },
   {
-    "id": 9,
+    "id": 16,
     "title": "Doodle Jump",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Doodle%20Jump",
     "url": "/games/doodle-jump/index.html"
   },
   {
-    "id": 10,
+    "id": 17,
+    "title": "Drift Boss",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Drift%20Boss",
+    "url": "/games/drift-boss/index.html"
+  },
+  {
+    "id": 18,
     "title": "Drift Hunters",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Drift%20Hunters",
     "url": "/games/drift-hunters/index.html"
   },
   {
-    "id": 12,
+    "id": 19,
+    "title": "Drive Mad",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Drive%20Mad",
+    "url": "/games/drive-mad/index.html"
+  },
+  {
+    "id": 20,
+    "title": "Eggycar",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Eggycar",
+    "url": "/games/eggycar/index.html"
+  },
+  {
+    "id": 21,
     "title": "Flappy Bird",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Flappy%20Bird",
     "url": "/games/flappy-bird/index.html"
   },
   {
-    "id": 13,
+    "id": 22,
     "title": "Fruitninja",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Fruitninja",
     "url": "/games/fruitninja/index.html"
   },
   {
-    "id": 14,
+    "id": 23,
     "title": "Geodash",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Geodash",
     "url": "/games/geodash/index.html"
   },
   {
-    "id": 15,
+    "id": 24,
+    "title": "Getaway Shootout",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Getaway%20Shootout",
+    "url": "/games/getaway-shootout/index.html"
+  },
+  {
+    "id": 25,
     "title": "Happywheels",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Happywheels",
     "url": "/games/happywheels/index.html"
   },
   {
-    "id": 16,
+    "id": 26,
     "title": "Hextris",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Hextris",
     "url": "/games/hextris/index.html"
   },
   {
-    "id": 17,
+    "id": 27,
+    "title": "Idle Breakout",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Idle%20Breakout",
+    "url": "/games/idle-breakout/index.html"
+  },
+  {
+    "id": 28,
+    "title": "Minesweeper",
+    "category": "Arcade",
+    "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Minesweeper",
+    "url": "/games/minesweeper/index.html"
+  },
+  {
+    "id": 29,
     "title": "Motox3m",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Motox3m",
     "url": "/games/motox3m/index.html"
   },
   {
-    "id": 18,
+    "id": 30,
     "title": "Paperio2",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Paperio2",
     "url": "/games/paperio2/index.html"
   },
   {
-    "id": 19,
+    "id": 31,
     "title": "Racer",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Racer",
     "url": "/games/racer/v4.final.html"
   },
   {
-    "id": 20,
+    "id": 32,
     "title": "Retro Bowl",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Retro%20Bowl",
     "url": "/games/retro-bowl/index.html"
   },
   {
-    "id": 21,
+    "id": 33,
     "title": "Slope",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Slope",
     "url": "/games/slope/index.html"
   },
   {
-    "id": 22,
+    "id": 34,
     "title": "Stickman Hook",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Stickman%20Hook",
     "url": "/games/stickman-hook/index.html"
   },
   {
-    "id": 24,
+    "id": 35,
     "title": "T Rex Runner",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=T%20Rex%20Runner",
     "url": "/games/t-rex-runner/index.html"
   },
   {
-    "id": 25,
+    "id": 36,
     "title": "Temple Run 2",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Temple%20Run%202",
     "url": "/games/temple-run-2/index.html"
   },
   {
-    "id": 26,
+    "id": 37,
     "title": "Tetris",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Tetris",
     "url": "/games/tetris/index.html"
   },
   {
-    "id": 27,
+    "id": 38,
     "title": "Tunnel Rush",
     "category": "Arcade",
     "thumbnail": "https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Tunnel%20Rush",
