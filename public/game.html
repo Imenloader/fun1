@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Play Game - ArcadeX</title>
+    <!-- We can link the same style.css and override/add specific styles -->
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+      .portal-container {
+        display: flex;
+        gap: 2rem;
+        padding: 2rem 5%;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .game-player-section {
+        flex: 3;
+        display: flex;
+        flex-direction: column;
+      }
+      .sidebar-section {
+        flex: 1;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 15px;
+        padding: 1.5rem;
+        height: fit-content;
+      }
+      .game-frame-container {
+        width: 100%;
+        background: #000;
+        border: 2px solid var(--accent-color);
+        border-radius: 10px;
+        overflow: hidden;
+        aspect-ratio: 16/9;
+        margin-bottom: 1rem;
+        box-shadow: 0 10px 30px rgba(0, 210, 255, 0.2);
+      }
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+      .game-meta h1 {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+      }
+      .game-meta p {
+        color: #aaa;
+      }
+      .sidebar-section h3 {
+        margin-bottom: 1rem;
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 0.5rem;
+      }
+      .suggested-game {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: transform 0.2s;
+        text-decoration: none;
+        color: inherit;
+      }
+      .suggested-game:hover {
+        transform: translateX(5px);
+      }
+      .suggested-game img {
+        width: 80px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 5px;
+        border: 1px solid var(--glass-border);
+      }
+      .suggested-info h4 {
+        font-size: 1rem;
+        margin-bottom: 0.2rem;
+      }
+      .suggested-info span {
+        font-size: 0.8rem;
+        color: var(--accent-color);
+      }
+      
+      @media (max-width: 900px) {
+        .portal-container {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div class="logo"><a href="/" style="color:inherit;text-decoration:none;">Arcade<span>X</span></a></div>
+        <nav>
+          <a href="/">Home</a>
+          <a href="#">Action</a>
+          <a href="#">Ragdoll</a>
+          <a href="#">Strategy</a>
+        </nav>
+      </header>
+      
+      <main class="portal-container">
+        <section class="game-player-section">
+          <div class="game-frame-container">
+            <iframe id="game-iframe" allowfullscreen="true" scrolling="no"></iframe>
+          </div>
+          <div class="game-meta">
+            <h1 id="game-title">Loading...</h1>
+            <p id="game-category">Please wait</p>
+          </div>
+        </section>
+
+        <aside class="sidebar-section">
+          <h3>More Games</h3>
+          <div id="sidebar-games">
+            <!-- Suggested games injected here -->
+          </div>
+        </aside>
+      </main>
+
+      <footer>
+        <p>&copy; 2026 ArcadeX. All rights reserved.</p>
+      </footer>
+    </div>
+    <script type="module" src="/game.js"></script>
+  </body>
+</html>
