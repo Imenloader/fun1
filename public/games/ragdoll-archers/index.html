@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ragdoll Archers</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #1a1a2e; overflow: hidden; }
+    canvas { display: block; }
+    #ui {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 30px; align-items: center; font-family: 'Segoe UI', sans-serif;
+      background: rgba(0,0,0,0.5); border-radius: 30px; padding: 8px 24px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .score-box { text-align: center; color: white; }
+    .score-box .label { font-size: 11px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+    .score-box .value { font-size: 22px; font-weight: bold; }
+    #p1score .value { color: #00d2ff; }
+    #p2score .value { color: #ff6b6b; }
+    #lives .value { color: #ffd700; }
+    #overlay {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; background: rgba(0,0,0,0.85);
+      font-family: 'Segoe UI', sans-serif; color: white; text-align: center;
+    }
+    #overlay h1 { font-size: 52px; font-weight: 900; margin-bottom: 10px;
+      background: linear-gradient(135deg, #00d2ff, #7b2ff7); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; }
+    #overlay p { font-size: 16px; opacity: 0.7; margin-bottom: 30px; max-width: 400px; }
+    #overlay button {
+      background: linear-gradient(135deg, #00d2ff, #7b2ff7); border: none; color: white;
+      padding: 14px 40px; border-radius: 30px; font-size: 18px; font-weight: 700;
+      cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 8px 30px rgba(0,210,255,0.3);
+    }
+    #overlay button:hover { transform: scale(1.05); box-shadow: 0 12px 40px rgba(0,210,255,0.5); }
+    #controls {
+      position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      font-family: 'Segoe UI', sans-serif; color: rgba(255,255,255,0.4);
+      font-size: 12px; text-align: center; pointer-events: none;
+    }
+    #aim-indicator {
+      position: absolute; top: 0; left: 0; pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<div id="ui">
+  <div class="score-box" id="p1score"><div class="label">Player 1</div><div class="value" id="p1val">0</div></div>
+  <div class="score-box" id="lives"><div class="label">Round</div><div class="value" id="roundval">1</div></div>
+  <div class="score-box" id="p2score"><div class="label">Player 2 (AI)</div><div class="value" id="p2val">0</div></div>
+</div>
+
+<div id="overlay">
+  <h1>⚔️ Ragdoll Archers</h1>
+  <p>Aim with your mouse and click to shoot arrows at the enemy ragdoll!<br>
+     First to 5 kills wins the match.</p>
+  <button id="startBtn" onclick="startGame()">▶ Play Now</button>
+</div>
+
+<canvas id="c"></canvas>
+<div id="controls">🖱️ Move mouse to aim · Click to shoot</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Game State ──
+let gameRunning = false;
+let p1Score = 0, p2Score = 0, round = 1;
+const WIN_SCORE = 5;
+let arrows = [];
+let particles = [];
+let aiCooldown = 0;
+let mouseX = 0, mouseY = 0;
+
+// ── Ragdoll class ──
+class Ragdoll {
+  constructor(x, y, color, facingRight) {
+    this.x = x; this.y = y;
+    this.color = color;
+    this.facingRight = facingRight;
+    this.vx = 0; this.vy = 0;
+    this.dead = false;
+    this.deathTimer = 0;
+    this.hitParts = [];
+    this.wobble = 0;
+    this.breathe = 0;
+    this.health = 3; // 3 arrows to kill
+    // Ragdoll limb angles
+    this.limbAngles = {
+      lArm: -0.3, rArm: 0.3,
+      lLeg: 0.2, rLeg: -0.2,
+      head: 0,
+    };
+    this.limbVel = { lArm:0, rArm:0, lLeg:0, rLeg:0, head:0 };
+  }
+
+  get headPos() {
+    return { x: this.x, y: this.y - 38 + Math.sin(this.breathe) * 2 };
+  }
+  get bodyTop() { return { x: this.x, y: this.y - 22 }; }
+  get bodyBot() { return { x: this.x, y: this.y + 10 }; }
+  get lShoulder() { return { x: this.x - 8, y: this.y - 18 }; }
+  get rShoulder() { return { x: this.x + 8, y: this.y - 18 }; }
+  get lHip() { return { x: this.x - 6, y: this.y + 10 }; }
+  get rHip() { return { x: this.x + 6, y: this.y + 10 }; }
+
+  bowAimAngle(tx, ty) {
+    const s = this.facingRight ? this.rShoulder : this.lShoulder;
+    return Math.atan2(ty - s.y, tx - s.x);
+  }
+
+  shoot(tx, ty, isAI = false) {
+    if (this.dead) return;
+    const s = this.facingRight ? this.rShoulder : this.lShoulder;
+    const angle = this.bowAimAngle(tx, ty);
+    const speed = 12;
+    arrows.push({
+      x: s.x, y: s.y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      owner: isAI ? 'ai' : 'player',
+      angle,
+      stuck: false,
+      stuckTo: null,
+      life: 180
+    });
+    // Recoil wobble
+    this.wobble = isAI ? -3 : 3;
+    // Arm kick animation
+    if (this.facingRight) this.limbVel.rArm = -4;
+    else this.limbVel.lArm = -4;
+    spawnMuzzle(s.x, s.y);
+  }
+
+  hit(arrow) {
+    this.health--;
+    this.hitParts.push({ timer: 30, vx: arrow.vx * 0.3, vy: arrow.vy * 0.3 });
+    spawnBlood(arrow.x, arrow.y);
+    if (this.health <= 0) this.die(arrow);
+    else {
+      // Stagger
+      this.wobble = (arrow.vx > 0 ? 1 : -1) * 5;
+      this.vy -= 2;
+    }
+  }
+
+  die(arrow) {
+    this.dead = true;
+    this.vx = arrow.vx * 0.4;
+    this.vy = -5;
+    // Explode limbs
+    for (let k in this.limbVel) {
+      this.limbVel[k] = (Math.random() - 0.5) * 15;
+    }
+    spawnBlood(this.x, this.y, 20);
+  }
+
+  update() {
+    this.breathe += 0.04;
+    this.wobble *= 0.85;
+
+    for (let k in this.limbAngles) {
+      this.limbAngles[k] += this.limbVel[k] * 0.1;
+      this.limbVel[k] *= 0.8;
+    }
+
+    if (this.dead) {
+      this.deathTimer++;
+      this.vy += 0.3;
+      this.y += this.vy;
+      this.x += this.vx;
+      this.vx *= 0.95;
+      const ground = H - 80;
+      if (this.y > ground) { this.y = ground; this.vy *= -0.2; this.vx *= 0.7; }
+    } else {
+      // Idle bob
+      const ground = H - 80;
+      if (this.y < ground) { this.vy += 0.4; this.y += this.vy; }
+      else { this.y = ground; this.vy = 0; }
+    }
+  }
+
+  draw(aimX, aimY) {
+    ctx.save();
+    ctx.translate(this.x + this.wobble, this.y);
+
+    const f = this.facingRight ? 1 : -1;
+    const c = this.color;
+    const dead = this.dead;
+    const deathRot = dead ? Math.min(this.deathTimer * 0.05, Math.PI / 2) * f : 0;
+    ctx.rotate(deathRot);
+
+    // Shadow
+    ctx.beginPath();
+    ctx.ellipse(0, 12, 20, 5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fill();
+
+    // Legs
+    this._drawLimb(f * -6, 10, this.limbAngles.lLeg + (dead ? 0.8 : 0), 22, 8, c, true);
+    this._drawLimb(f * 6, 10, this.limbAngles.rLeg + (dead ? -0.5 : 0), 22, 8, c, true);
+
+    // Body
+    ctx.beginPath();
+    ctx.roundRect(f * -8, -22, 16, 32, 4);
+    ctx.fillStyle = c;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Arms
+    let aimAngle = 0;
+    if (!dead && aimX !== undefined) {
+      aimAngle = this.bowAimAngle(aimX, aimY);
+    }
+    const bowArm = this.facingRight ? 'right' : 'left';
+
+    // Back arm
+    this._drawLimb(-f * 8, -18, this.limbAngles.lArm + deathRot * 0.5, 20, 7, this._darker(c), false);
+    // Bow arm (aimed)
+    const bowAngle = dead ? this.limbAngles.rArm : aimAngle;
+    this._drawLimb(f * 8, -18, bowAngle, 20, 7, c, false);
+
+    // Bow
+    if (!dead) {
+      ctx.save();
+      ctx.translate(f * 8, -18);
+      ctx.rotate(bowAngle);
+      ctx.translate(20, 0);
+      // Draw bow
+      ctx.beginPath();
+      ctx.arc(0, 0, 10, -1.2, 1.2);
+      ctx.strokeStyle = '#8B4513';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Bowstring
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(-1.2) * 10, Math.sin(-1.2) * 10);
+      ctx.lineTo(Math.cos(1.2) * 10, Math.sin(1.2) * 10);
+      ctx.strokeStyle = '#ddd';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // Arrow on bow
+      ctx.beginPath();
+      ctx.moveTo(-5, 0); ctx.lineTo(12, 0);
+      ctx.strokeStyle = '#d4a017';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Head
+    const headY = -38 + Math.sin(this.breathe) * 2;
+    ctx.save();
+    ctx.translate(f * 2, headY + (dead ? 5 : 0));
+    ctx.rotate(this.limbAngles.head + deathRot);
+    // Head circle
+    ctx.beginPath();
+    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+    ctx.fillStyle = this._skin(c);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+    // Eyes
+    const eyeDir = f;
+    ctx.fillStyle = dead ? '#666' : '#222';
+    ctx.beginPath(); ctx.arc(eyeDir * 4, -2, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = dead ? '#444' : 'white';
+    ctx.beginPath(); ctx.arc(eyeDir * 4 + 0.5, -2.5, 1, 0, Math.PI * 2); ctx.fill();
+    // Mouth
+    ctx.beginPath();
+    if (dead) {
+      ctx.arc(eyeDir * 2, 4, 3, 0, Math.PI);
+    } else {
+      ctx.arc(eyeDir * 2, 2, 3, 0, Math.PI, true);
+    }
+    ctx.strokeStyle = '#222'; ctx.lineWidth = 1.5; ctx.stroke();
+    // Hat
+    ctx.fillStyle = this.facingRight ? '#1a6ef5' : '#c0392b';
+    ctx.fillRect(-8, -14, 16, 5);
+    ctx.fillRect(-5, -19, 10, 6);
+    ctx.restore();
+
+    // Health dots
+    if (!dead) {
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(-10 + i * 10, -55, 4, 0, Math.PI * 2);
+        ctx.fillStyle = i < this.health ? '#2ecc71' : '#333';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  _drawLimb(ox, oy, angle, len, thick, col, isLeg) {
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.rotate(angle);
+    const r = thick / 2;
+    ctx.beginPath();
+    ctx.roundRect(0, -r, len, thick, r);
+    ctx.fillStyle = isLeg ? this._darker(col) : col;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.restore();
+  }
+
+  _darker(c) {
+    if (c === '#00d2ff') return '#0099bb';
+    if (c === '#ff6b6b') return '#cc4444';
+    return c;
+  }
+  _skin(c) {
+    return '#f0c080';
+  }
+}
+
+// ── Arrow class ──
+function updateArrows(p1, p2) {
+  for (let i = arrows.length - 1; i >= 0; i--) {
+    const a = arrows[i];
+    if (a.stuck) { a.life--; if (a.life <= 0) arrows.splice(i, 1); continue; }
+
+    a.vy += 0.25; // gravity
+    a.x += a.vx;
+    a.y += a.vy;
+    a.angle = Math.atan2(a.vy, a.vx);
+    a.life--;
+
+    // Ground
+    if (a.y > H - 80) { a.y = H - 80; a.stuck = true; continue; }
+    if (a.y < 0 || a.x < 0 || a.x > W) { arrows.splice(i, 1); continue; }
+    if (a.life <= 0) { arrows.splice(i, 1); continue; }
+
+    // Hit detection
+    const targets = a.owner === 'player' ? [p2] : [p1];
+    for (const t of targets) {
+      if (t.dead) continue;
+      const dx = a.x - t.x, dy = a.y - (t.y - 14);
+      if (Math.sqrt(dx*dx + dy*dy) < 22) {
+        t.hit(a);
+        a.stuck = true;
+        a.vx = 0; a.vy = 0;
+        break;
+      }
+    }
+  }
+}
+
+function drawArrows() {
+  for (const a of arrows) {
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    ctx.rotate(a.angle);
+    // Shaft
+    ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(10, 0);
+    ctx.strokeStyle = '#d4a017'; ctx.lineWidth = 2; ctx.stroke();
+    // Head
+    ctx.beginPath();
+    ctx.moveTo(10, 0); ctx.lineTo(6, -3); ctx.lineTo(6, 3);
+    ctx.fillStyle = '#888'; ctx.fill();
+    // Fletching
+    ctx.beginPath();
+    ctx.moveTo(-10, 0); ctx.lineTo(-14, -4); ctx.lineTo(-12, 0); ctx.lineTo(-14, 4);
+    ctx.fillStyle = '#e74c3c'; ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ── Particles ──
+function spawnBlood(x, y, count = 8) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 4 + 1;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 2,
+      life: 30 + Math.random() * 20,
+      maxLife: 50,
+      size: Math.random() * 4 + 2,
+      color: `hsl(0,80%,${40 + Math.random()*20}%)`
+    });
+  }
+}
+
+function spawnMuzzle(x, y) {
+  for (let i = 0; i < 5; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 3,
+      vy: (Math.random() - 0.5) * 3 - 1,
+      life: 15, maxLife: 15,
+      size: Math.random() * 3 + 1,
+      color: '#ffd700'
+    });
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.15;
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Background ──
+function drawBackground() {
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#0d0d2b');
+  sky.addColorStop(0.6, '#1a1a4e');
+  sky.addColorStop(1, '#2d1b4e');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  for (let i = 0; i < 80; i++) {
+    const sx = (i * 137.5) % W;
+    const sy = (i * 97.3) % (H * 0.6);
+    const ss = (i % 3 === 0) ? 2 : 1;
+    ctx.beginPath(); ctx.arc(sx, sy, ss, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Moon
+  ctx.beginPath();
+  ctx.arc(W * 0.8, 80, 35, 0, Math.PI * 2);
+  ctx.fillStyle = '#fffff0';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(W * 0.8 + 10, 72, 30, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a1a4e';
+  ctx.fill();
+
+  // Ground platform
+  const gY = H - 80;
+  const grad = ctx.createLinearGradient(0, gY, 0, H);
+  grad.addColorStop(0, '#2d5a1b');
+  grad.addColorStop(0.2, '#1a3a0f');
+  grad.addColorStop(1, '#0f1f08');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, gY, W, H - gY);
+
+  // Ground detail
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 30) {
+    ctx.beginPath(); ctx.moveTo(x, gY); ctx.lineTo(x + 15, gY - 5); ctx.stroke();
+  }
+
+  // Fence posts
+  ctx.fillStyle = '#4a3728';
+  for (let x = 40; x < W - 40; x += 80) {
+    ctx.fillRect(x, gY - 20, 8, 25);
+    ctx.fillRect(x - 5, gY - 22, 18, 5);
+  }
+  // Fence rails
+  ctx.fillStyle = '#5a4535';
+  ctx.fillRect(40, gY - 15, W - 80, 4);
+  ctx.fillRect(40, gY - 8, W - 80, 3);
+
+  // Distant mountains
+  ctx.fillStyle = 'rgba(30,20,60,0.8)';
+  ctx.beginPath();
+  ctx.moveTo(0, gY);
+  const mpts = [[0.1,0.4],[0.2,0.2],[0.35,0.45],[0.5,0.15],[0.65,0.38],[0.8,0.22],[0.95,0.4],[1,0.5]];
+  for (const [mx, my] of mpts) ctx.lineTo(mx*W, gY - my*(H*0.35));
+  ctx.lineTo(W, gY); ctx.closePath(); ctx.fill();
+}
+
+// ── Game entities ──
+let p1, p2;
+
+function initRound() {
+  arrows = [];
+  particles = [];
+  p1 = new Ragdoll(W * 0.2, H - 80, '#00d2ff', true);
+  p2 = new Ragdoll(W * 0.8, H - 80, '#ff6b6b', false);
+  aiCooldown = 80 + Math.random() * 60;
+}
+
+// ── AI ──
+function updateAI() {
+  if (!p2 || p2.dead || !p1 || p1.dead) return;
+  aiCooldown--;
+  // Slight aim wobble for fun
+  const wobbleX = (Math.random() - 0.5) * 80;
+  const wobbleY = (Math.random() - 0.5) * 40;
+  if (aiCooldown <= 0) {
+    p2.shoot(p1.x + wobbleX, p1.y - 20 + wobbleY, true);
+    aiCooldown = 80 + Math.random() * 80;
+  }
+}
+
+// ── Score / round management ──
+function checkRoundEnd() {
+  if (!p1 || !p2) return;
+  if (p1.dead && p1.deathTimer > 60) {
+    p2Score++;
+    document.getElementById('p2val').textContent = p2Score;
+    if (p2Score >= WIN_SCORE) showWin('AI wins!', '#ff6b6b');
+    else { round++; document.getElementById('roundval').textContent = round; setTimeout(initRound, 1200); }
+  }
+  if (p2.dead && p2.deathTimer > 60) {
+    p1Score++;
+    document.getElementById('p1val').textContent = p1Score;
+    if (p1Score >= WIN_SCORE) showWin('You win! 🎉', '#00d2ff');
+    else { round++; document.getElementById('roundval').textContent = round; setTimeout(initRound, 1200); }
+  }
+}
+
+function showWin(msg, color) {
+  gameRunning = false;
+  const ol = document.getElementById('overlay');
+  ol.querySelector('h1').textContent = msg;
+  ol.querySelector('h1').style.background = `linear-gradient(135deg, ${color}, #fff)`;
+  ol.querySelector('h1').style.webkitBackgroundClip = 'text';
+  ol.querySelector('p').textContent = `Final score — You: ${p1Score} | AI: ${p2Score}. Play again?`;
+  ol.style.display = 'flex';
+  // Reset scores for next game
+  p1Score = 0; p2Score = 0; round = 1;
+}
+
+// ── Input ──
+canvas.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+canvas.addEventListener('click', e => {
+  if (!gameRunning || !p1 || p1.dead) return;
+  p1.shoot(e.clientX, e.clientY);
+});
+// Touch support
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (!gameRunning || !p1 || p1.dead) return;
+  const t = e.changedTouches[0];
+  p1.shoot(t.clientX, t.clientY);
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY;
+}, { passive: false });
+
+// ── Draw aim line ──
+function drawAimLine() {
+  if (!p1 || p1.dead) return;
+  const s = p1.rShoulder;
+  const angle = p1.bowAimAngle(mouseX, mouseY);
+  const len = 100;
+  ctx.save();
+  ctx.setLineDash([6, 6]);
+  ctx.strokeStyle = 'rgba(0, 210, 255, 0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(s.x, s.y);
+  // Parabola preview
+  let px = s.x, py = s.y;
+  const spd = 12;
+  let pvx = Math.cos(angle) * spd, pvy = Math.sin(angle) * spd;
+  for (let i = 0; i < 20; i++) {
+    px += pvx; py += pvy; pvy += 0.25;
+    if (py > H - 80) break;
+    ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+// ── Main loop ──
+function loop() {
+  requestAnimationFrame(loop);
+  drawBackground();
+  if (!gameRunning) return;
+
+  updateArrows(p1, p2);
+  updateParticles();
+  updateAI();
+
+  if (p1) p1.update();
+  if (p2) p2.update();
+
+  drawAimLine();
+  drawArrows();
+  drawParticles();
+
+  if (p1) p1.draw(mouseX, mouseY);
+  if (p2) p2.draw();
+
+  checkRoundEnd();
+}
+
+function startGame() {
+  p1Score = 0; p2Score = 0; round = 1;
+  document.getElementById('p1val').textContent = 0;
+  document.getElementById('p2val').textContent = 0;
+  document.getElementById('roundval').textContent = 1;
+  document.getElementById('overlay').style.display = 'none';
+  gameRunning = true;
+  initRound();
+}
+
+loop();
+</script>
+</body>
+</html>
