@@ -23,9 +23,9 @@ async function loadGamePage() {
 
     // Fullscreen button
     document.getElementById('fullscreen-btn').addEventListener('click', () => {
-      const iframe = document.getElementById('game-iframe');
-      if (iframe.requestFullscreen) iframe.requestFullscreen();
-      else if (iframe.webkitRequestFullscreen) iframe.webkitRequestFullscreen();
+      const container = document.getElementById('game-container');
+      if (container.requestFullscreen) container.requestFullscreen();
+      else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
     });
 
     // Populate More Games as grid cards

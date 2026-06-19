@@ -18,7 +18,7 @@ function renderGames() {
 
   grid.innerHTML = games.map(game => `
     <div class="game-card">
-      <img src="${game.thumbnail}" alt="${game.title}" class="game-thumbnail" />
+      <img src="${game.thumbnail}" alt="${game.title}" class="game-thumbnail" loading="lazy" />
       <div class="game-info">
         <h3 class="game-title">${game.title}</h3>
         <p class="game-category">${game.category}</p>

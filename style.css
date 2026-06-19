@@ -39,8 +39,7 @@ header {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--glass-border);
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 100;
 }
 
