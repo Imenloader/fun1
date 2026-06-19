@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ArcadeX - Ragdoll Games</title>
+    <!-- Add Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div class="logo">Arcade<span>X</span></div>
+        <nav>
+          <a href="#" class="active">Home</a>
+          <a href="#">Action</a>
+          <a href="#">Ragdoll</a>
+          <a href="#">Strategy</a>
+        </nav>
+      </header>
+      
+      <main>
+        <section class="hero">
+          <h1>Welcome to ArcadeX</h1>
+          <p>The ultimate destination for high-end web games.</p>
+          <button class="cta-button">Play Now</button>
+        </section>
+
+        <section class="game-grid-container">
+          <h2>Trending Games</h2>
+          <div id="game-grid" class="game-grid">
+            <!-- Game cards will be injected here by main.js -->
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <p>&copy; 2026 ArcadeX. All rights reserved.</p>
+      </footer>
+    </div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
