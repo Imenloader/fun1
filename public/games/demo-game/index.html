@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ragdoll Archers - Demo</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: white;
+      font-family: sans-serif;
+      overflow: hidden;
+    }
+    #gameCanvas {
+      background-color: #333;
+      border: 2px solid #00d2ff;
+      border-radius: 8px;
+    }
+    .back-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      padding: 10px 20px;
+      background: #00d2ff;
+      color: #000;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <a href="/" class="back-btn">Back to Portal</a>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <script>
+    // A simple demo to represent a self-hosted HTML5 game
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let x = 400;
+    let y = 300;
+    let dx = 4;
+    let dy = 4;
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw ball
+      ctx.beginPath();
+      ctx.arc(x, y, 20, 0, Math.PI*2);
+      ctx.fillStyle = "#00d2ff";
+      ctx.fill();
+      ctx.closePath();
+
+      // Bounce
+      if(x + dx > canvas.width-20 || x + dx < 20) dx = -dx;
+      if(y + dy > canvas.height-20 || y + dy < 20) dy = -dy;
+
+      x += dx;
+      y += dy;
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "24px Arial";
+      ctx.fillText("Self-Hosted Game Demo", 260, 50);
+      ctx.font = "16px Arial";
+      ctx.fillText("Bypasses network filters because it runs locally from your domain!", 160, 90);
+
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+  </script>
+</body>
+</html>

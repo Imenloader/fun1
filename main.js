@@ -3,10 +3,10 @@ import './style.css'
 const games = [
   {
     id: 1,
-    title: 'Ragdoll Archers',
+    title: 'Ragdoll Archers (Self-Hosted)',
     category: 'Action / Ragdoll',
     thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    url: '#'
+    url: '/games/demo-game/index.html'
   },
   {
     id: 2,
