@@ -4,7 +4,7 @@ let games = [];
 
 async function init() {
   try {
-    const res = await fetch('/games.json');
+    const res = await fetch('/games.json?t=' + new Date().getTime());
     games = await res.json();
     renderGames();
   } catch (err) {
