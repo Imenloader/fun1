@@ -140,7 +140,9 @@ let engine, world, runner;
 let W, H;
 let gameState = 'MENU'; // MENU, PLAYING, SHOP, GAMEOVER
 let wave = 1;
-let skulls = parseInt(localStorage.getItem('ragdoll_skulls')) || 0;
+
+let skulls = 0;
+try { skulls = parseInt(localStorage.getItem('ragdoll_skulls')) || 0; } catch (e) {}
 let p1Kills = 0;
 
 // Player Stats (Persistent across waves)
@@ -449,7 +451,7 @@ function handleDeath(isP1) {
     // Enemy died
     p1Kills++;
     skulls += 5 + wave;
-    localStorage.setItem('ragdoll_skulls', skulls);
+    try { localStorage.setItem('ragdoll_skulls', skulls); } catch (e) {}
     updateUI();
     setTimeout(() => {
       gameState = 'SHOP';
@@ -473,7 +475,7 @@ function buyUpgrade(type, cost, value) {
     if (type === 'hp') { playerStats.maxHp += value; playerStats.hp += value; }
     if (type === 'stam') { playerStats.maxStamina += value; }
     if (type === 'dmg') { playerStats.dmgMult += value; }
-    localStorage.setItem('ragdoll_skulls', skulls);
+    try { localStorage.setItem('ragdoll_skulls', skulls); } catch (e) {}
     updateShopUI();
     updateUI();
   }
