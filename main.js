@@ -56,6 +56,20 @@ const games = [
     category: 'Action',
     thumbnail: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
     url: '/play.html?src=https://ragdollarchersonline.io/'
+  },
+  {
+    id: 9,
+    title: 'Outrun Racing',
+    category: 'Racing',
+    thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    url: '/games/racer/v4.final.html'
+  },
+  {
+    id: 10,
+    title: 'T-Rex Runner',
+    category: 'Arcade',
+    thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    url: '/games/t-rex-runner/index.html'
   }
 ];
 
