@@ -5,14 +5,14 @@ async function loadGamePage() {
   const gameId = parseInt(urlParams.get('id'));
 
   if (!gameId) {
-    document.getElementById('game-title').innerText = "Game not found";
+    document.getElementById('game-title').innerText = 'Game not found';
     return;
   }
 
   try {
     const res = await fetch('/games.json?t=' + new Date().getTime());
     const games = await res.json();
-    
+
     const currentGame = games.find(g => g.id === gameId);
     if (currentGame) {
       document.getElementById('game-title').innerText = currentGame.title;
@@ -21,15 +21,23 @@ async function loadGamePage() {
       document.title = `${currentGame.title} - ArcadeX`;
     }
 
-    // Populate sidebar with random games
-    const sidebar = document.getElementById('sidebar-games');
-    const shuffled = games.sort(() => 0.5 - Math.random());
-    const suggestions = shuffled.filter(g => g.id !== gameId).slice(0, 8);
+    // Fullscreen button
+    document.getElementById('fullscreen-btn').addEventListener('click', () => {
+      const iframe = document.getElementById('game-iframe');
+      if (iframe.requestFullscreen) iframe.requestFullscreen();
+      else if (iframe.webkitRequestFullscreen) iframe.webkitRequestFullscreen();
+    });
 
-    sidebar.innerHTML = suggestions.map(g => `
-      <a href="/game.html?id=${g.id}" class="suggested-game">
-        <img src="${g.thumbnail}" alt="${g.title}">
-        <div class="suggested-info">
+    // Populate More Games as grid cards
+    const grid = document.getElementById('sidebar-games');
+    const shuffled = [...games].sort(() => 0.5 - Math.random());
+    const suggestions = shuffled.filter(g => g.id !== gameId).slice(0, 18);
+
+    grid.innerHTML = suggestions.map(g => `
+      <a href="/game.html?id=${g.id}" class="more-game-card">
+        <img src="${g.thumbnail}" alt="${g.title}" loading="lazy"
+             onerror="this.src='https://placehold.co/320x180/0f1115/00d2ff?font=Montserrat&text=${encodeURIComponent(g.title)}'">
+        <div class="card-info">
           <h4>${g.title}</h4>
           <span>${g.category}</span>
         </div>
@@ -37,7 +45,7 @@ async function loadGamePage() {
     `).join('');
 
   } catch (e) {
-    console.error("Failed to load games database", e);
+    console.error('Failed to load games database', e);
   }
 }
 
