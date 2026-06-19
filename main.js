@@ -3,72 +3,72 @@ import './style.css'
 const games = [
   {
     id: 1,
-    title: 'Ragdoll Archers (Self-Hosted Demo)',
+    title: 'Ragdoll Archers Demo',
     category: 'Action / Ragdoll',
-    thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    thumbnail: 'https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Ragdoll+Archers',
     url: '/games/demo-game/index.html'
   },
   {
     id: 2,
     title: '2048',
     category: 'Puzzle',
-    thumbnail: 'https://images.unsplash.com/photo-1614294148960-9aa740632a87?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    thumbnail: 'https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=2048',
     url: '/games/2048/index.html'
   },
   {
     id: 3,
     title: 'Hextris',
     category: 'Puzzle / Arcade',
-    thumbnail: 'https://images.unsplash.com/photo-1614294149010-950b698f72c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    thumbnail: 'https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Hextris',
     url: '/games/hextris/index.html'
   },
   {
     id: 4,
     title: 'Clumsy Bird',
     category: 'Arcade',
-    thumbnail: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    thumbnail: 'https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Clumsy+Bird',
     url: '/games/clumsy-bird/index.html'
   },
   {
     id: 5,
     title: 'Tetris',
     category: 'Arcade',
-    thumbnail: 'https://images.unsplash.com/photo-1493711662062-fa541abbe5de?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    thumbnail: 'https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Tetris',
     url: '/games/tetris/index.html'
   },
   {
     id: 6,
     title: 'Ragdoll Archers (Official)',
     category: 'Action',
-    thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    url: '/play.html?src=https://www.crazygames.com/embed/ragdoll-archers'
+    thumbnail: 'https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Official+Ragdoll',
+    url: 'https://www.crazygames.com/embed/ragdoll-archers'
   },
   {
     id: 7,
     title: 'Ragdoll Archers 2',
     category: 'Action',
-    thumbnail: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    url: '/play.html?src=https://ragdollarchers2.io/'
+    thumbnail: 'https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Ragdoll+Archers+2',
+    url: 'https://ragdollarchers2.io/'
   },
   {
     id: 8,
     title: 'Ragdoll Archers Online',
     category: 'Action',
-    thumbnail: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-    url: '/play.html?src=https://ragdollarchersonline.io/'
+    thumbnail: 'https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Ragdoll+Online',
+    url: 'https://ragdollarchersonline.io/'
   },
   {
     id: 9,
     title: 'Outrun Racing',
     category: 'Racing',
-    thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    thumbnail: 'https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=Outrun+Racing',
     url: '/games/racer/v4.final.html'
   },
   {
     id: 10,
     title: 'T-Rex Runner',
     category: 'Arcade',
-    thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+    thumbnail: 'https://placehold.co/600x400/0f1115/00d2ff?font=Montserrat&text=T-Rex+Runner',
     url: '/games/t-rex-runner/index.html'
   }
 ];
@@ -83,10 +83,26 @@ function renderGames() {
       <div class="game-info">
         <h3 class="game-title">${game.title}</h3>
         <p class="game-category">${game.category}</p>
-        <button class="play-btn" onclick="window.location.href='${game.url}'">Play Now</button>
+        <button class="play-btn" onclick="window.playGame('${game.url}')">Play Now</button>
       </div>
     </div>
   `).join('');
+}
+
+window.playGame = function(url) {
+  const overlay = document.getElementById('game-overlay');
+  const iframe = document.getElementById('game-iframe');
+  iframe.src = url;
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden'; // Prevent scrolling
+}
+
+window.closeGame = function() {
+  const overlay = document.getElementById('game-overlay');
+  const iframe = document.getElementById('game-iframe');
+  iframe.src = ''; // Stop the game audio/video
+  overlay.classList.add('hidden');
+  document.body.style.overflow = 'auto'; // Restore scrolling
 }
 
 document.addEventListener('DOMContentLoaded', () => {

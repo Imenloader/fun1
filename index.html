@@ -41,6 +41,13 @@
         <p>&copy; 2026 ArcadeX. All rights reserved.</p>
       </footer>
     </div>
+
+    <!-- Fullscreen Game Overlay -->
+    <div id="game-overlay" class="hidden">
+      <button id="close-game" onclick="window.closeGame()">← Back to Portal</button>
+      <iframe id="game-iframe" allowfullscreen="true" scrolling="no"></iframe>
+    </div>
+
     <script type="module" src="/main.js"></script>
   </body>
 </html>
