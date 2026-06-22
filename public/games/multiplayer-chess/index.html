@@ -284,6 +284,14 @@
             <div id="game-over-msg" class="game-over-text">Checkmate! White wins.</div>
             <button id="btn-rematch" class="btn hidden">Offer Rematch</button>
           </div>
+          <!-- Draw Offer Modal -->
+          <div id="draw-offer-overlay" class="hidden" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; border-radius: 4px;">
+            <div class="game-over-text">Opponent offers a draw.</div>
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+              <button id="btn-accept-draw" class="btn" style="background-color: #2ed573; color: #111;">Accept</button>
+              <button id="btn-decline-draw" class="btn" style="background-color: #ff4757;">Decline</button>
+            </div>
+          </div>
         </div>
 
         <!-- Sidebar -->
@@ -726,16 +734,20 @@
         } else if (data.type === 'resign') {
           showGameOver(`Opponent resigned. You win!`);
         } else if (data.type === 'draw_offer') {
-          if(confirm("Opponent offers a draw. Accept?")) {
-            conn.send({type: 'draw_accept'});
-            showGameOver("Game drawn by agreement.");
-          } else {
-            conn.send({type: 'draw_decline'});
-          }
+          document.getElementById('draw-offer-overlay').classList.remove('hidden');
         } else if (data.type === 'draw_accept') {
           showGameOver("Draw offer accepted.");
         } else if (data.type === 'draw_decline') {
-          alert("Draw offer declined.");
+          const oldText = connStatusEl.innerText;
+          const oldColor = connStatusEl.style.color;
+          connStatusEl.innerText = "Draw declined.";
+          connStatusEl.style.color = "#ff4757";
+          setTimeout(() => {
+            if (connStatusEl.innerText === "Draw declined.") {
+              connStatusEl.innerText = oldText;
+              connStatusEl.style.color = oldColor;
+            }
+          }, 3000);
         } else if (data.type === 'timeout') {
           handleTimeout(data.loser);
         }
@@ -959,10 +971,30 @@
         if (isAI) {
           alert("Stockfish rejects your draw offer.");
         } else {
-          alert("Draw offer sent.");
+          const oldText = connStatusEl.innerText;
+          const oldColor = connStatusEl.style.color;
+          connStatusEl.innerText = "Draw offer sent...";
+          connStatusEl.style.color = "#feca57";
+          setTimeout(() => {
+            if (connStatusEl.innerText === "Draw offer sent...") {
+              connStatusEl.innerText = oldText;
+              connStatusEl.style.color = oldColor;
+            }
+          }, 3000);
           if (conn && conn.open) conn.send({type: 'draw_offer'});
         }
       }
+    });
+
+    document.getElementById('btn-accept-draw').addEventListener('click', () => {
+      document.getElementById('draw-offer-overlay').classList.add('hidden');
+      if (conn && conn.open) conn.send({type: 'draw_accept'});
+      showGameOver("Game drawn by agreement.");
+    });
+
+    document.getElementById('btn-decline-draw').addEventListener('click', () => {
+      document.getElementById('draw-offer-overlay').classList.add('hidden');
+      if (conn && conn.open) conn.send({type: 'draw_decline'});
     });
 
   </script>
