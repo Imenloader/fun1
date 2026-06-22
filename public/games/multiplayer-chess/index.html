@@ -894,7 +894,16 @@
       conn.on('data', (data) => {
         if (data.type === 'move') {
           var move = game.move({ from: data.move.from, to: data.move.to, promotion: 'q' });
-          makeCustomMoveAnimation(move, game.fen());
+          if (!move) {
+            // FEN is out of sync (packet dropped). Forcefully sync to the true FEN.
+            console.warn("Out of sync! Forcing FEN update.");
+            game.load(data.fen);
+            board.position(data.fen);
+          } else {
+            // Valid move, animate it. Verify FEN matches perfectly.
+            if (data.fen && game.fen() !== data.fen) game.load(data.fen);
+            makeCustomMoveAnimation(move, game.fen());
+          }
           session.wTime = data.wTime; session.bTime = data.bTime; session.lastMoveTime = Date.now();
           highlightMove(data.move);
           saveSession();
@@ -1277,7 +1286,7 @@
       if (isAI) {
         if (!game.game_over() && !isGameOver) makeAIMove();
       } else if (conn && conn.open) {
-        conn.send({ type: 'move', move: move, wTime: session.wTime, bTime: session.bTime });
+        conn.send({ type: 'move', move: move, fen: game.fen(), wTime: session.wTime, bTime: session.bTime });
       }
     }
 
