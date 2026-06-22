@@ -197,6 +197,7 @@
     const roomCodeDisplay = document.getElementById('room-code-display');
     const statusEl = document.getElementById('status');
     const connStatusEl = document.getElementById('connection-status');
+    const loadingMsg = document.getElementById('loading-msg');
     
     // State
     let board = null;
@@ -205,58 +206,124 @@
     let peer = null;
     let conn = null;
     let connectTimeout = null;
+    let isReconnecting = false;
 
-    // Helper: generate short random ID
+    // Persistent State Management
+    let session = JSON.parse(localStorage.getItem('p2p_chess_state')) || null;
+    
+    function saveSession() {
+      if (session) {
+        session.fen = game.fen();
+        localStorage.setItem('p2p_chess_state', JSON.stringify(session));
+      }
+    }
+    
+    function clearSession() {
+      session = null;
+      localStorage.removeItem('p2p_chess_state');
+    }
+
     function generateId() {
       return Math.random().toString(36).substr(2, 5).toUpperCase();
     }
 
+    // Auto-reconnect on load
+    window.onload = () => {
+      if (session) {
+        isReconnecting = true;
+        menuPanel.classList.add('hidden');
+        gamePanel.classList.remove('hidden');
+        game.load(session.fen);
+        myColor = session.myColor;
+        
+        connStatusEl.innerText = "Reconnecting to game...";
+        connStatusEl.style.color = "#feca57";
+        
+        initBoard();
+        initPeer(session.myId);
+        
+        peer.on('open', () => {
+          if (session.role === 'host') {
+            connStatusEl.innerText = "Waiting for opponent to reconnect...";
+          } else {
+            connectToHost(session.targetId, true);
+          }
+        });
+        
+        setupPeerHostEvents();
+      }
+    };
+
     function initPeer(id = null) {
       if (peer) {
         peer.destroy();
-        peer = null;
       }
-      if (id) {
-        peer = new Peer(id, { debug: 2 });
-      } else {
-        peer = new Peer({ debug: 2 });
-      }
+      peer = new Peer(id, { debug: 2 });
       
       peer.on('error', (err) => {
         if (err.type === 'unavailable-id') {
-          // rare collision, try again if hosting
-          document.getElementById('btn-host').click(); 
+          if (session && session.myId === id) {
+            connStatusEl.innerText = "Reconnecting (ID blocked)...";
+            setTimeout(() => initPeer(id), 3000);
+          } else {
+            document.getElementById('btn-host').click(); 
+          }
         } else if (err.type === 'peer-unavailable') {
-          alert("Room code not found. The host may have disconnected.");
-          resetToMenu();
+          if (session && session.role === 'join') {
+            connStatusEl.innerText = "Host offline. Retrying...";
+            setTimeout(() => connectToHost(session.targetId, true), 3000);
+          } else if (!session) {
+            alert("Room code not found.");
+            resetToMenu();
+          }
         } else {
-          alert("Connection error: " + err.type);
-          resetToMenu();
+          console.error("Peer error:", err);
+          if (!session) {
+            alert("Connection error: " + err.type);
+            resetToMenu();
+          }
         }
+      });
+      return peer;
+    }
+
+    function setupPeerHostEvents() {
+      peer.on('connection', (connection) => {
+        if (conn && conn.open) {
+          conn.close();
+        }
+        conn = connection;
+        conn.on('open', () => {
+          setupConnection();
+          if (isReconnecting || session) {
+            // Send current board state to joining peer to force sync
+            conn.send({ type: 'sync', fen: game.fen() });
+            connStatusEl.innerText = "Opponent reconnected.";
+            connStatusEl.style.color = "#2ed573";
+          } else {
+            startGame('w');
+          }
+        });
       });
     }
 
     // --- Host Logic ---
     document.getElementById('btn-host').addEventListener('click', () => {
-      document.getElementById('loading-msg').classList.remove('hidden');
+      loadingMsg.classList.remove('hidden');
       document.getElementById('btn-host').disabled = true;
       document.getElementById('btn-join').disabled = true;
       
       const hostId = "CHESS-" + generateId();
       initPeer(hostId);
+      setupPeerHostEvents();
       
       peer.on('open', (id) => {
+        session = { role: 'host', myId: id, targetId: null, myColor: 'w', fen: game.fen() };
+        saveSession();
+        
         menuPanel.classList.add('hidden');
         waitingPanel.classList.remove('hidden');
         roomCodeDisplay.innerText = id.replace('CHESS-', '');
-      });
-
-      peer.on('connection', (connection) => {
-        conn = connection;
-        conn.on('open', () => {
-          setupConnection();
-          startGame('w');
-        });
       });
     });
 
@@ -265,43 +332,48 @@
       const code = document.getElementById('input-code').value.trim().toUpperCase();
       if (!code) return alert("Please enter a code");
       
-      document.getElementById('loading-msg').classList.remove('hidden');
+      loadingMsg.classList.remove('hidden');
       document.getElementById('btn-host').disabled = true;
       document.getElementById('btn-join').disabled = true;
       
-      initPeer(); // Create new joiner peer
+      const myId = "CHESS-J-" + generateId();
+      initPeer(myId);
 
       peer.on('open', () => {
-        connectToHost(code);
+        session = { role: 'join', myId: myId, targetId: "CHESS-" + code, myColor: 'b', fen: game.fen() };
+        saveSession();
+        connectToHost(code, false);
       });
     });
 
     document.getElementById('btn-leave').addEventListener('click', () => {
-      if (confirm("Are you sure you want to leave the game?")) {
+      if (confirm("Are you sure you want to leave the game? This will abandon the match.")) {
+        clearSession();
         resetToMenu();
       }
     });
 
-    function connectToHost(code) {
-      const targetId = "CHESS-" + code;
+    function connectToHost(code, reconnecting = false) {
+      const targetId = code.startsWith("CHESS-") ? code : "CHESS-" + code;
       conn = peer.connect(targetId, { reliable: true });
       
-      // 10 second timeout to prevent infinite freezing
-      connectTimeout = setTimeout(() => {
-        alert("Connection timed out. The host may be behind a strict firewall.");
-        resetToMenu();
-      }, 10000);
+      if (!reconnecting) {
+        connectTimeout = setTimeout(() => {
+          alert("Connection timed out.");
+          clearSession();
+          resetToMenu();
+        }, 10000);
+      }
       
       conn.on('open', () => {
         clearTimeout(connectTimeout);
         setupConnection();
-        startGame('b');
-      });
-      
-      conn.on('error', (err) => {
-        clearTimeout(connectTimeout);
-        alert("Failed to join: " + err);
-        resetToMenu();
+        if (reconnecting) {
+          connStatusEl.innerText = "Reconnected to host.";
+          connStatusEl.style.color = "#2ed573";
+        } else {
+          startGame('b');
+        }
       });
     }
 
@@ -310,25 +382,34 @@
         if (data.type === 'move') {
           game.move(data.move);
           board.position(game.fen());
+          saveSession();
+          updateStatus();
+        } else if (data.type === 'sync') {
+          game.load(data.fen);
+          board.position(game.fen());
+          saveSession();
           updateStatus();
         }
       });
       
       conn.on('close', () => {
-        connStatusEl.innerText = "Opponent disconnected.";
-        connStatusEl.style.color = "#ff4757";
-        alert("The opponent has disconnected.");
+        if (session) {
+          connStatusEl.innerText = "Opponent disconnected. Waiting...";
+          connStatusEl.style.color = "#ff4757";
+        }
       });
     }
 
     function resetToMenu() {
       clearTimeout(connectTimeout);
+      isReconnecting = false;
       menuPanel.classList.remove('hidden');
       waitingPanel.classList.add('hidden');
       gamePanel.classList.add('hidden');
-      document.getElementById('loading-msg').classList.add('hidden');
+      loadingMsg.classList.add('hidden');
       document.getElementById('btn-host').disabled = false;
       document.getElementById('btn-join').disabled = false;
+      
       if (conn) { conn.close(); conn = null; }
       if (peer) { peer.destroy(); peer = null; }
       
@@ -344,17 +425,10 @@
     }
 
     // --- Game Logic ---
-    function startGame(color) {
-      myColor = color;
-      menuPanel.classList.add('hidden');
-      waitingPanel.classList.add('hidden');
-      gamePanel.classList.remove('hidden');
-      
-      game.reset();
-
+    function initBoard() {
       const config = {
         draggable: true,
-        position: 'start',
+        position: game.fen(),
         orientation: myColor === 'w' ? 'white' : 'black',
         onDragStart: onDragStart,
         onDrop: onDrop,
@@ -362,69 +436,73 @@
         pieceTheme: 'img/chesspieces/wikipedia/{piece}.png'
       };
       
+      if (board && typeof board.destroy === 'function') {
+        try { board.destroy(); } catch(e) {}
+      }
+      
       board = Chessboard('board', config);
       $(window).off('resize').on('resize', board.resize);
+      updateStatus();
+    }
+
+    function startGame(color) {
+      myColor = color;
+      isReconnecting = false;
+      menuPanel.classList.add('hidden');
+      waitingPanel.classList.add('hidden');
+      gamePanel.classList.remove('hidden');
+      
+      game.reset();
+      saveSession();
+      initBoard();
       
       connStatusEl.innerText = "Connected to opponent.";
       connStatusEl.style.color = "#2ed573";
-      updateStatus();
     }
 
     function onDragStart(source, piece, position, orientation) {
       if (game.game_over()) return false;
       if (!conn || !conn.open) return false;
       
-      // Only pick up your own pieces, and only if it's your turn
       if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
           (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
         return false;
       }
       
-      // Cannot move if it's not your turn
       if (game.turn() !== myColor) {
         return false;
       }
     }
 
     function onDrop(source, target) {
-      // see if the move is legal
       const move = game.move({
         from: source,
         to: target,
-        promotion: 'q' // NOTE: always promote to a queen for simplicity
+        promotion: 'q'
       });
 
-      // illegal move
       if (move === null) return 'snapback';
 
-      // Send valid move to peer
+      saveSession();
       updateStatus();
       if (conn && conn.open) {
         conn.send({ type: 'move', move: move });
       }
     }
 
-    // update the board position after the piece snap
-    // for castling, en passant, pawn promotion
     function onSnapEnd() {
       board.position(game.fen());
     }
 
     function updateStatus() {
       let statusHTML = '';
-
       let moveColor = game.turn() === 'w' ? 'White' : 'Black';
 
-      // checkmate?
       if (game.in_checkmate()) {
         statusHTML = `Game over, ${moveColor} is in checkmate.`;
-      }
-      // draw?
-      else if (game.in_draw()) {
+      } else if (game.in_draw()) {
         statusHTML = 'Game over, drawn position';
-      }
-      // game still on
-      else {
+      } else {
         statusHTML = `${moveColor} to move`;
         if (game.in_check()) {
           statusHTML += ', ' + moveColor + ' is in check';
@@ -434,9 +512,9 @@
       statusEl.innerText = statusHTML;
       
       if (game.turn() === myColor) {
-        statusEl.style.color = '#2ed573'; // Green for my turn
+        statusEl.style.color = '#2ed573';
       } else {
-        statusEl.style.color = '#feca57'; // Yellow for their turn
+        statusEl.style.color = '#feca57';
       }
     }
 
