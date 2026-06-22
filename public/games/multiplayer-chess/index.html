@@ -410,11 +410,10 @@
     let myColor = 'w';
     let peer = null;
     let conn = null;
-    let connectTimeout = null;
-    let isReconnecting = false;
-    
-    // Timer State
     let clockInterval = null;
+    let connectTimeout = null;
+    let retryTimeout = null;
+    let isReconnecting = false;
     
     let session = JSON.parse(localStorage.getItem('p2p_chess_state')) || null;
 
@@ -537,10 +536,14 @@
       
       peer.on('error', (err) => {
         if (err.type === 'unavailable-id') {
-          if (session && session.myId === id) setTimeout(() => initPeer(id), 3000);
+          if (session && session.myId === id) retryTimeout = setTimeout(() => initPeer(id), 3000);
           else document.getElementById('btn-host').click(); 
         } else if (err.type === 'peer-unavailable') {
-          if (session && session.role === 'join') setTimeout(() => connectToHost(session.targetId, true), 3000);
+          if (session && session.role === 'join') {
+            connStatusEl.innerText = "Host offline. Retrying...";
+            connStatusEl.style.color = "#feca57";
+            retryTimeout = setTimeout(() => connectToHost(session.targetId, true), 3000);
+          }
           else if (!session) { alert("Room not found."); resetToMenu(); }
         }
       });
@@ -553,7 +556,7 @@
         conn = connection;
         conn.on('open', () => {
           setupConnection();
-          if (isReconnecting) {
+          if (isReconnecting || !gamePanel.classList.contains('hidden')) {
             // Force sync
             conn.send({ type: 'sync', state: session });
             connStatusEl.innerText = "Opponent reconnected.";
@@ -705,15 +708,22 @@
       });
       
       conn.on('close', () => {
-        if (session) {
+        if (session && !isGameOver) {
           connStatusEl.innerText = "Opponent disconnected...";
           connStatusEl.style.color = "#ff4757";
+          if (session.role === 'join') {
+            connStatusEl.innerText = "Host disconnected. Reconnecting...";
+            connStatusEl.style.color = "#feca57";
+            clearTimeout(retryTimeout);
+            retryTimeout = setTimeout(() => connectToHost(session.targetId, true), 3000);
+          }
         }
       });
     }
 
     function resetToMenu() {
       clearTimeout(connectTimeout);
+      clearTimeout(retryTimeout);
       clearInterval(clockInterval);
       isReconnecting = false;
       isAI = false;
