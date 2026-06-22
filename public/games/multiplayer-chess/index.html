@@ -363,15 +363,6 @@
       transition: box-shadow 0.5s ease-out;
     }
     
-    @keyframes piece-jump {
-      0%   { transform: translateY(0) scale(1); }
-      50%  { transform: translateY(-40px) scale(1.2); }
-      100% { transform: translateY(0) scale(1); }
-    }
-    .jumping-piece {
-      animation: piece-jump 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards !important;
-      z-index: 9999 !important;
-    }
   </style>
 </head>
 <body>
@@ -553,9 +544,7 @@
             
             const move = game.move({ from: source, to: target, promotion: promotion });
             if (move) {
-              applyJump(move.from);
-              board.position(game.fen());
-              setTimeout(() => triggerEffects(move), 200);
+              makeCustomMoveAnimation(move, game.fen());
               highlightMove(move);
               
               if (session.timeControl !== 'unlimited') {
@@ -905,9 +894,7 @@
       conn.on('data', (data) => {
         if (data.type === 'move') {
           var move = game.move({ from: data.move.from, to: data.move.to, promotion: 'q' });
-          applyJump(data.move.from);
-          board.position(game.fen());
-          setTimeout(() => triggerEffects(move), 200);
+          makeCustomMoveAnimation(move, game.fen());
           session.wTime = data.wTime; session.bTime = data.bTime; session.lastMoveTime = Date.now();
           highlightMove(data.move);
           saveSession();
@@ -1124,13 +1111,66 @@
       }
     }
 
-    function applyJump(sourceSquare) {
-      // Find the piece img at the source square BEFORE it moves
-      const pieceEl = document.querySelector(`img[data-square="${sourceSquare}"]`);
-      if (pieceEl) {
-        pieceEl.classList.add('jumping-piece');
-        setTimeout(() => pieceEl.classList.remove('jumping-piece'), 200);
+    function makeCustomMoveAnimation(move, fen) {
+      const fromSquare = document.querySelector('.square-' + move.from);
+      const toSquare = document.querySelector('.square-' + move.to);
+      const pieceEl = document.querySelector(`img[data-square="${move.from}"]`);
+      
+      if (!fromSquare || !toSquare || !pieceEl) {
+        board.position(fen);
+        setTimeout(() => triggerEffects(move), 200);
+        return;
       }
+
+      const fromRect = fromSquare.getBoundingClientRect();
+      const toRect = toSquare.getBoundingClientRect();
+      
+      let capturedClone = null;
+      if (move.flags.includes('c') || move.flags.includes('e')) {
+        const targetPiece = document.querySelector(`img[data-square="${move.to}"]`);
+        if (targetPiece) {
+          capturedClone = targetPiece.cloneNode(true);
+          capturedClone.style.position = 'fixed';
+          capturedClone.style.left = toRect.left + 'px';
+          capturedClone.style.top = toRect.top + 'px';
+          capturedClone.style.width = toRect.width + 'px';
+          capturedClone.style.height = toRect.height + 'px';
+          capturedClone.style.zIndex = 9998;
+          capturedClone.style.margin = '0';
+          document.body.appendChild(capturedClone);
+        }
+      }
+
+      const clone = pieceEl.cloneNode(true);
+      clone.style.position = 'fixed';
+      clone.style.left = fromRect.left + 'px';
+      clone.style.top = fromRect.top + 'px';
+      clone.style.width = fromRect.width + 'px';
+      clone.style.height = fromRect.height + 'px';
+      clone.style.zIndex = 9999;
+      clone.style.margin = '0';
+      document.body.appendChild(clone);
+      
+      board.position(fen, false); // Snap instantly
+      
+      const newPiece = document.querySelector(`img[data-square="${move.to}"]`);
+      if (newPiece) newPiece.style.opacity = '0';
+      
+      const anim = clone.animate([
+        { left: fromRect.left + 'px', top: fromRect.top + 'px', transform: 'translateY(0) scale(1)' },
+        { left: (fromRect.left + toRect.left)/2 + 'px', top: (fromRect.top + toRect.top)/2 + 'px', transform: 'translateY(-50px) scale(1.3)' },
+        { left: toRect.left + 'px', top: toRect.top + 'px', transform: 'translateY(0) scale(1)' }
+      ], {
+        duration: 350,
+        easing: 'ease-in-out'
+      });
+      
+      anim.onfinish = () => {
+        clone.remove();
+        if (capturedClone) capturedClone.remove();
+        if (newPiece) newPiece.style.opacity = '1';
+        triggerEffects(move);
+      };
     }
 
     function triggerEffects(move) {
