@@ -151,11 +151,45 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
       flex-grow: 1;
-      min-height: 200px;
-      max-height: 300px;
+      min-height: 350px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+    }
+    
+    .tabs {
+      display: flex;
+      background: rgba(0,0,0,0.5);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #888;
+      padding: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      font-family: inherit;
+      transition: 0.2s;
+    }
+    .tab-btn:hover {
+      color: #fff;
+      background: rgba(255,255,255,0.05);
+    }
+    .tab-btn.active {
+      color: var(--accent-color);
+      border-bottom: 2px solid var(--accent-color);
+      background: rgba(0, 210, 255, 0.1);
+    }
+    .chat-badge {
+      background: #ff4757;
+      color: white;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 5px;
     }
     
     .history-header {
@@ -225,19 +259,7 @@
     }
     .game-over-text { font-size: 24px; font-weight: bold; margin-bottom: 15px; color: #feca57; text-align: center;}
     
-    /* Chat Container */
-    .chat-container {
-      width: 300px;
-      background: var(--panel-bg);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      display: flex;
-      flex-direction: column;
-      height: calc(100vh - 250px);
-      max-height: 540px;
-      min-height: 400px;
-      overflow: hidden;
-    }
+    /* Chat Container CSS reused for tab-content-chat */
     .chat-messages {
       flex-grow: 1;
       padding: 10px;
@@ -392,16 +414,35 @@
             <div id="opp-clock" class="clock">--:--</div>
           </div>
 
-          <!-- History Panel -->
+          <!-- Tabbed Panel -->
           <div class="history-panel">
-            <div class="history-header">
-              <div id="status" style="color: #feca57;">White to move</div>
-              <div id="connection-status" style="font-size: 12px; color: #2ed573;">Connected</div>
+            <div class="tabs">
+              <button id="tab-moves" class="tab-btn active">Moves</button>
+              <button id="tab-chat" class="tab-btn">Live Chat <span id="chat-badge" class="chat-badge hidden">!</span></button>
             </div>
-            <div id="history-body" class="history-body"></div>
-            <div class="controls" style="padding: 10px; background: rgba(0,0,0,0.3);">
-              <button id="btn-draw" class="btn btn-warning btn-small">Offer Draw</button>
-              <button id="btn-resign" class="btn btn-danger btn-small">Resign</button>
+
+            <!-- Moves Content -->
+            <div id="content-moves" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
+              <div class="history-header">
+                <div id="status" style="color: #feca57;">White to move</div>
+                <div id="connection-status" style="font-size: 12px; color: #2ed573;">Connected</div>
+              </div>
+              <div id="history-body" class="history-body"></div>
+              <div class="controls" style="padding: 10px; background: rgba(0,0,0,0.3);">
+                <button id="btn-draw" class="btn btn-warning btn-small">Offer Draw</button>
+                <button id="btn-resign" class="btn btn-danger btn-small">Resign</button>
+              </div>
+            </div>
+
+            <!-- Chat Content -->
+            <div id="content-chat" class="hidden" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
+              <div id="chat-messages" class="chat-messages">
+                <div class="chat-system">Welcome to Live Chat! Messages are not saved.</div>
+              </div>
+              <div class="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Type a message..." maxlength="100" autocomplete="off" />
+                <button id="btn-send-chat" class="btn btn-small" style="background:#2ed573; color:#111; margin:0;"><i class="fa-solid fa-paper-plane"></i></button>
+              </div>
             </div>
           </div>
 
@@ -415,20 +456,6 @@
           </div>
           
           <button id="btn-leave" class="btn btn-danger" style="margin-top: 10px;">Leave Game</button>
-        </div>
-
-        <!-- Chat Panel -->
-        <div class="chat-container">
-          <div class="history-header" style="justify-content: center;">
-            <div style="color: #feca57;"><i class="fa-solid fa-comments"></i> Live Chat</div>
-          </div>
-          <div id="chat-messages" class="chat-messages">
-            <div class="chat-system">Welcome to Live Chat! Messages are not saved.</div>
-          </div>
-          <div class="chat-input-container">
-            <input type="text" id="chat-input" placeholder="Type a message..." maxlength="100" autocomplete="off" />
-            <button id="btn-send-chat" class="btn btn-small" style="background:#2ed573; color:#111; margin:0;"><i class="fa-solid fa-paper-plane"></i></button>
-          </div>
         </div>
 
       </div>
@@ -1176,7 +1203,25 @@
       if (conn && conn.open) conn.send({type: 'draw_decline'});
     });
 
-    // --- Chat System ---
+    // --- Chat System & Tabs ---
+    document.getElementById('tab-moves').addEventListener('click', () => {
+      document.getElementById('tab-moves').classList.add('active');
+      document.getElementById('tab-chat').classList.remove('active');
+      document.getElementById('content-moves').classList.remove('hidden');
+      document.getElementById('content-chat').classList.add('hidden');
+    });
+    
+    document.getElementById('tab-chat').addEventListener('click', () => {
+      document.getElementById('tab-chat').classList.add('active');
+      document.getElementById('tab-moves').classList.remove('active');
+      document.getElementById('content-chat').classList.remove('hidden');
+      document.getElementById('content-moves').classList.add('hidden');
+      document.getElementById('chat-badge').classList.add('hidden');
+      
+      const msgs = document.getElementById('chat-messages');
+      msgs.scrollTop = msgs.scrollHeight;
+    });
+
     function appendChatMessage(text, sender) {
       const msgs = document.getElementById('chat-messages');
       const div = document.createElement('div');
@@ -1184,6 +1229,10 @@
       div.innerText = text;
       msgs.appendChild(div);
       msgs.scrollTop = msgs.scrollHeight;
+      
+      if (document.getElementById('content-chat').classList.contains('hidden') && sender === 'opp') {
+        document.getElementById('chat-badge').classList.remove('hidden');
+      }
     }
 
     document.getElementById('btn-send-chat').addEventListener('click', () => {
