@@ -566,19 +566,9 @@
       peer.on('connection', (connection) => {
         if (conn && conn.open) conn.close();
         conn = connection;
+        setupConnection();
         conn.on('open', () => {
-          setupConnection();
-          if (isReconnecting || !gamePanel.classList.contains('hidden')) {
-            // Force sync
-            conn.send({ type: 'sync', state: session });
-            connStatusEl.innerText = "Opponent reconnected.";
-            connStatusEl.style.color = "#2ed573";
-          } else {
-            // When joiner connects for the first time, officially start clocks
-            session.lastMoveTime = Date.now();
-            saveSession();
-            startGame('w');
-          }
+          // Wait for Joiner to send request_sync
         });
       });
     }
@@ -666,11 +656,13 @@
     function connectToHost(code, reconnecting = false) {
       const targetId = code.startsWith("CHESS-") ? code : "CHESS-" + code;
       conn = peer.connect(targetId, { reliable: true });
+      setupConnection();
+      
       if (!reconnecting) connectTimeout = setTimeout(() => { alert("Timed out."); clearSession(); resetToMenu(); }, 10000);
       
       conn.on('open', () => {
         clearTimeout(connectTimeout);
-        setupConnection();
+        conn.send({ type: 'request_sync' });
         if (reconnecting) {
           connStatusEl.innerText = "Reconnected.";
           connStatusEl.style.color = "#2ed573";
@@ -701,6 +693,19 @@
           
           saveSession();
           updateUI();
+        } else if (data.type === 'request_sync') {
+          if (session && session.role === 'host') {
+            conn.send({ type: 'sync', state: session });
+            if (!isReconnecting && gamePanel.classList.contains('hidden')) {
+              // First time connection
+              session.lastMoveTime = Date.now();
+              saveSession();
+              startGame('w');
+            } else {
+              connStatusEl.innerText = "Opponent reconnected.";
+              connStatusEl.style.color = "#2ed573";
+            }
+          }
         } else if (data.type === 'resign') {
           showGameOver(`Opponent resigned. You win!`);
         } else if (data.type === 'draw_offer') {
