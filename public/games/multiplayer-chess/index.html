@@ -281,8 +281,27 @@
         <div class="board-container" style="position: relative;">
           <div id="board"></div>
           <div id="game-over-overlay" class="hidden">
-            <div id="game-over-msg" class="game-over-text">Checkmate! White wins.</div>
-            <button id="btn-rematch" class="btn hidden">Offer Rematch</button>
+            <div id="game-over-msg" class="game-over-text" style="font-size: 28px; font-weight: 800; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.5);">Checkmate! White wins.</div>
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+              <button id="btn-restart" class="btn" style="background-color: #2ed573; color: #111;">Restart Game</button>
+              <button id="btn-exit-home" class="btn" style="background-color: #ff4757;">Exit to Home Page</button>
+            </div>
+          </div>
+          <!-- Resign Confirm Modal -->
+          <div id="resign-overlay" class="hidden" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; border-radius: 4px;">
+            <div class="game-over-text">Are you sure you want to resign?</div>
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+              <button id="btn-confirm-resign" class="btn" style="background-color: #ff4757; color: #fff;">Yes, Resign</button>
+              <button id="btn-cancel-resign" class="btn" style="background-color: #747d8c; color: #fff;">Cancel</button>
+            </div>
+          </div>
+          <!-- Leave Confirm Modal -->
+          <div id="leave-overlay" class="hidden" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; border-radius: 4px;">
+            <div class="game-over-text">Abandon the match?</div>
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+              <button id="btn-confirm-leave" class="btn" style="background-color: #ff4757; color: #fff;">Yes, Leave</button>
+              <button id="btn-cancel-leave" class="btn" style="background-color: #747d8c; color: #fff;">Cancel</button>
+            </div>
           </div>
           <!-- Draw Offer Modal -->
           <div id="draw-offer-overlay" class="hidden" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; border-radius: 4px;">
@@ -659,7 +678,20 @@
     });
 
     document.getElementById('btn-leave').addEventListener('click', () => {
-      if (confirm("Abandon the match?")) { clearSession(); resetToMenu(); }
+      if (isGameOver) {
+        clearSession(); resetToMenu();
+      } else {
+        document.getElementById('leave-overlay').classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('btn-confirm-leave').addEventListener('click', () => {
+      document.getElementById('leave-overlay').classList.add('hidden');
+      clearSession(); resetToMenu();
+    });
+
+    document.getElementById('btn-cancel-leave').addEventListener('click', () => {
+      document.getElementById('leave-overlay').classList.add('hidden');
     });
 
     function connectToHost(code, reconnecting = false) {
@@ -748,6 +780,14 @@
               connStatusEl.style.color = oldColor;
             }
           }, 3000);
+        } else if (data.type === 'restart') {
+          game.reset();
+          isGameOver = false;
+          session.lastMoveTime = Date.now();
+          saveSession();
+          gameOverOverlay.classList.add('hidden');
+          initBoard();
+          updateUI();
         } else if (data.type === 'timeout') {
           handleTimeout(data.loser);
         }
@@ -960,10 +1000,44 @@
 
     // --- Buttons ---
     document.getElementById('btn-resign').addEventListener('click', () => {
-      if (!game.game_over() && !isGameOver && confirm("Resign the game?")) {
+      if (!game.game_over() && !isGameOver) {
+        document.getElementById('resign-overlay').classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('btn-confirm-resign').addEventListener('click', () => {
+      document.getElementById('resign-overlay').classList.add('hidden');
+      if (!game.game_over() && !isGameOver) {
         showGameOver("You resigned.");
         if (!isAI && conn && conn.open) conn.send({type: 'resign'});
       }
+    });
+
+    document.getElementById('btn-cancel-resign').addEventListener('click', () => {
+      document.getElementById('resign-overlay').classList.add('hidden');
+    });
+
+    document.getElementById('btn-restart').addEventListener('click', () => {
+      if (isAI) {
+        game.reset();
+        isGameOver = false;
+        gameOverOverlay.classList.add('hidden');
+        initBoard();
+        updateUI();
+      } else {
+        if (conn && conn.open) conn.send({type: 'restart'});
+        game.reset();
+        isGameOver = false;
+        session.lastMoveTime = Date.now();
+        saveSession();
+        gameOverOverlay.classList.add('hidden');
+        initBoard();
+        updateUI();
+      }
+    });
+
+    document.getElementById('btn-exit-home').addEventListener('click', () => {
+      window.top.location.href = '/';
     });
 
     document.getElementById('btn-draw').addEventListener('click', () => {
