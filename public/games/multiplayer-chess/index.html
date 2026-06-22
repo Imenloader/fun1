@@ -201,33 +201,46 @@
     let myColor = 'w';
     let peer = null;
     let conn = null;
+    let connectTimeout = null;
 
     // Helper: generate short random ID
     function generateId() {
       return Math.random().toString(36).substr(2, 5).toUpperCase();
     }
 
-    function initPeer() {
-      if (!peer) {
-        // Using public PeerJS server
+    function initPeer(id = null) {
+      if (peer) {
+        peer.destroy();
+        peer = null;
+      }
+      if (id) {
+        peer = new Peer(id, { debug: 2 });
+      } else {
         peer = new Peer({ debug: 2 });
-        peer.on('error', (err) => {
+      }
+      
+      peer.on('error', (err) => {
+        if (err.type === 'unavailable-id') {
+          // rare collision, try again if hosting
+          document.getElementById('btn-host').click(); 
+        } else if (err.type === 'peer-unavailable') {
+          alert("Room code not found. The host may have disconnected.");
+          resetToMenu();
+        } else {
           alert("Connection error: " + err.type);
           resetToMenu();
-        });
-      }
+        }
+      });
     }
 
     // --- Host Logic ---
     document.getElementById('btn-host').addEventListener('click', () => {
       document.getElementById('loading-msg').classList.remove('hidden');
-      initPeer();
+      document.getElementById('btn-host').disabled = true;
+      document.getElementById('btn-join').disabled = true;
       
       const hostId = "CHESS-" + generateId();
-      
-      // Destroy old peer if re-hosting
-      peer.destroy();
-      peer = new Peer(hostId, { debug: 2 });
+      initPeer(hostId);
       
       peer.on('open', (id) => {
         menuPanel.classList.add('hidden');
@@ -237,18 +250,10 @@
 
       peer.on('connection', (connection) => {
         conn = connection;
-        setupConnection();
-        startGame('w');
-      });
-      
-      peer.on('error', (err) => {
-        if (err.type === 'unavailable-id') {
-          // rare collision, try again
-          document.getElementById('btn-host').click(); 
-        } else {
-          alert("Host error: " + err.type);
-          resetToMenu();
-        }
+        conn.on('open', () => {
+          setupConnection();
+          startGame('w');
+        });
       });
     });
 
@@ -258,29 +263,34 @@
       if (!code) return alert("Please enter a code");
       
       document.getElementById('loading-msg').classList.remove('hidden');
-      initPeer();
-
-      // Wait for peer to initialize if it hasn't
-      if (peer.disconnected) peer.reconnect();
+      document.getElementById('btn-host').disabled = true;
+      document.getElementById('btn-join').disabled = true;
       
-      // If peer is already open, connect immediately
-      if (peer.id) {
+      initPeer(); // Create new joiner peer
+
+      peer.on('open', () => {
         connectToHost(code);
-      } else {
-        peer.on('open', () => { connectToHost(code); });
-      }
+      });
     });
 
     function connectToHost(code) {
       const targetId = "CHESS-" + code;
       conn = peer.connect(targetId, { reliable: true });
       
+      // 10 second timeout to prevent infinite freezing
+      connectTimeout = setTimeout(() => {
+        alert("Connection timed out. The host may be behind a strict firewall.");
+        resetToMenu();
+      }, 10000);
+      
       conn.on('open', () => {
+        clearTimeout(connectTimeout);
         setupConnection();
         startGame('b');
       });
       
       conn.on('error', (err) => {
+        clearTimeout(connectTimeout);
         alert("Failed to join: " + err);
         resetToMenu();
       });
@@ -303,11 +313,14 @@
     }
 
     function resetToMenu() {
+      clearTimeout(connectTimeout);
       menuPanel.classList.remove('hidden');
       waitingPanel.classList.add('hidden');
       gamePanel.classList.add('hidden');
       document.getElementById('loading-msg').classList.add('hidden');
-      if (conn) conn.close();
+      document.getElementById('btn-host').disabled = false;
+      document.getElementById('btn-join').disabled = false;
+      if (conn) { conn.close(); conn = null; }
       if (peer) { peer.destroy(); peer = null; }
     }
 
@@ -331,6 +344,7 @@
       };
       
       board = Chessboard('board', config);
+      $(window).resize(board.resize);
       updateStatus();
     }
 
