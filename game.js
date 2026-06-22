@@ -21,12 +21,18 @@ async function loadGamePage() {
       document.title = `${currentGame.title} - ArcadeX`;
     }
 
-    // Fullscreen button
-    document.getElementById('fullscreen-btn').addEventListener('click', () => {
-      const container = document.getElementById('game-container');
-      if (container.requestFullscreen) container.requestFullscreen();
-      else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
-    });
+    const btn = document.getElementById('fullscreen-btn');
+    const container = document.getElementById('game-container');
+    if (btn && container) {
+      btn.addEventListener('click', () => {
+        container.classList.toggle('theater-mode');
+        if (container.classList.contains('theater-mode')) {
+          btn.innerText = '⛶ Exit Theater';
+        } else {
+          btn.innerText = '⛶ Fullscreen';
+        }
+      });
+    }
 
     // Populate More Games as grid cards
     const grid = document.getElementById('sidebar-games');

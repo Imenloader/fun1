@@ -14,11 +14,11 @@
     <div id="app">
       <header>
         <div class="logo">Arcade<span>X</span></div>
-        <nav>
-          <a href="#" class="active">Home</a>
-          <a href="#">Action</a>
-          <a href="#">Ragdoll</a>
-          <a href="#">Strategy</a>
+        <nav id="main-nav">
+          <a href="#" class="active" data-category="All">Home</a>
+          <a href="#" data-category="Action">Action</a>
+          <a href="#" data-category="Ragdoll">Ragdoll</a>
+          <a href="#" data-category="Strategy">Strategy</a>
         </nav>
       </header>
       
@@ -26,11 +26,14 @@
         <section class="hero">
           <h1>Welcome to ArcadeX</h1>
           <p>The ultimate destination for high-end web games.</p>
-          <button class="cta-button">Play Now</button>
+          <button class="cta-button" id="btn-play-now">Play Now</button>
         </section>
 
         <section class="game-grid-container">
-          <h2>Trending Games</h2>
+          <div class="grid-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <h2 style="margin-bottom: 0;">Trending Games</h2>
+            <input type="text" id="search-input" placeholder="Search games..." style="padding: 0.6rem 1.2rem; border-radius: 20px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: white; outline: none; width: 100%; max-width: 300px; font-family: var(--font-family); font-size: 1rem;" />
+          </div>
           <div id="game-grid" class="game-grid">
             <!-- Game cards will be injected here by main.js -->
           </div>
