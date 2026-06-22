@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multiplayer Chess (P2P)</title>
+  <title>P2P Pro Chess</title>
   
-  <!-- Chessboard.js CSS -->
   <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
     :root {
@@ -15,6 +15,8 @@
       --primary: #00d2ff;
       --secondary: #7b2ff7;
       --panel-bg: rgba(0, 0, 0, 0.5);
+      --highlight: rgba(255, 255, 0, 0.4);
+      --dot-color: rgba(0, 0, 0, 0.2);
     }
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -43,7 +45,7 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
-      max-width: 600px;
+      max-width: 900px;
       width: 100%;
     }
     
@@ -52,88 +54,176 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 12px;
       padding: 20px;
-      text-align: center;
     }
     
-    .menu {
+    .menu-panel { max-width: 500px; margin: 0 auto; text-align: center; }
+    
+    .menu { display: flex; flex-direction: column; gap: 15px; }
+    
+    .btn {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border: none; color: white; padding: 12px 24px; border-radius: 8px;
+      font-size: 16px; font-weight: bold; cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 210, 255, 0.4); }
+    .btn:disabled { background: #555; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-danger { background: #ff4757; }
+    .btn-danger:hover { box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+    .btn-warning { background: #ffa502; }
+    .btn-warning:hover { box-shadow: 0 4px 15px rgba(255, 165, 2, 0.4); }
+    .btn-small { padding: 8px 12px; font-size: 14px; }
+    
+    .input-group { display: flex; gap: 10px; }
+    input, select {
+      flex: 1; padding: 12px; border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.1);
+      color: white; font-size: 16px; outline: none;
+    }
+    input:focus, select:focus { border-color: var(--primary); }
+    select option { background: #1a1a2e; }
+    
+    .hidden { display: none !important; }
+    
+    .code-display {
+      font-size: 24px; font-family: monospace; letter-spacing: 2px;
+      background: rgba(0,0,0,0.8); padding: 10px; border-radius: 6px;
+      color: var(--primary); margin: 10px 0; user-select: all; text-align: center;
+    }
+    
+    /* Game Layout */
+    .game-layout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    
+    .board-container {
+      flex: 1;
+      min-width: 300px;
+      max-width: 500px;
+    }
+    
+    #board {
+      width: 100%;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    
+    .sidebar {
+      flex: 1;
+      min-width: 300px;
+      max-width: 400px;
       display: flex;
       flex-direction: column;
       gap: 15px;
     }
     
-    .btn {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      border: none;
-      color: white;
-      padding: 12px 24px;
+    /* Player Info Cards */
+    .player-card {
+      background: var(--panel-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0, 210, 255, 0.4);
-    }
-    
-    .btn:disabled {
-      background: #555;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-    
-    .input-group {
+      padding: 15px;
       display: flex;
-      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
     }
     
-    input {
-      flex: 1;
-      padding: 12px;
+    .player-details { display: flex; flex-direction: column; gap: 5px; }
+    .player-name { font-weight: bold; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+    .player-material { font-size: 14px; color: #a4b0be; min-height: 20px; }
+    
+    .clock {
+      font-size: 24px; font-family: monospace; font-weight: bold;
+      background: rgba(0,0,0,0.8); padding: 5px 10px; border-radius: 4px;
+      transition: background 0.3s;
+    }
+    .clock.active { background: #3742fa; }
+    .clock.low-time { color: #ff4757; }
+    
+    /* Move History */
+    .history-panel {
+      background: var(--panel-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
-      font-size: 16px;
-      outline: none;
-    }
-    
-    input:focus {
-      border-color: var(--primary);
-    }
-    
-    .hidden { display: none !important; }
-    
-    .status-box {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 10px;
-      color: #feca57;
-    }
-    
-    .code-display {
-      font-size: 24px;
-      font-family: monospace;
-      letter-spacing: 2px;
-      background: rgba(0,0,0,0.8);
-      padding: 10px;
-      border-radius: 6px;
-      color: var(--primary);
-      margin: 10px 0;
-      user-select: all;
-    }
-    
-    #board {
-      width: 100%;
-      max-width: 500px;
-      margin: 0 auto;
-      border-radius: 4px;
+      flex-grow: 1;
+      min-height: 200px;
+      max-height: 300px;
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
+    
+    .history-header {
+      background: rgba(0,0,0,0.4);
+      padding: 10px;
+      font-weight: bold;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .history-body {
+      padding: 10px;
+      overflow-y: auto;
+      flex-grow: 1;
+      display: grid;
+      grid-template-columns: 30px 1fr 1fr;
+      column-gap: 10px;
+      row-gap: 5px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    
+    .history-turn { color: #888; text-align: right; }
+    .history-move { cursor: pointer; padding: 2px 5px; border-radius: 3px; }
+    .history-move:hover { background: rgba(255,255,255,0.1); }
+    
+    .controls { display: flex; gap: 10px; margin-top: 10px; justify-content: center; }
+    
+    /* Board Highlights */
+    .highlight-last { background-color: var(--highlight) !important; }
+    .legal-dot {
+      width: 25%;
+      height: 25%;
+      background: var(--dot-color);
+      border-radius: 50%;
+      position: absolute;
+      top: 37.5%;
+      left: 37.5%;
+      pointer-events: none;
+    }
+    .capture-dot {
+      width: 80%;
+      height: 80%;
+      border: 5px solid var(--dot-color);
+      border-radius: 50%;
+      position: absolute;
+      top: 10%;
+      left: 10%;
+      background: transparent;
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    #game-over-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      border-radius: 4px;
+    }
+    .game-over-text { font-size: 24px; font-weight: bold; margin-bottom: 15px; color: #feca57; text-align: center;}
   </style>
 </head>
 <body>
@@ -143,10 +233,17 @@
   <div class="container">
     
     <!-- Connection Menu -->
-    <div id="menu-panel" class="panel">
-      <p style="margin-bottom: 15px; color: #ccc;">Play directly with a friend using a peer-to-peer connection. No accounts required.</p>
+    <div id="menu-panel" class="panel menu-panel">
+      <p style="margin-bottom: 15px; color: #ccc;">Play directly with a friend using a peer-to-peer connection.</p>
       
       <div class="menu">
+        <select id="time-control">
+          <option value="unlimited">Unlimited Time</option>
+          <option value="60">1 Minute (Bullet)</option>
+          <option value="180">3 Minutes (Blitz)</option>
+          <option value="300" selected>5 Minutes (Blitz)</option>
+          <option value="600">10 Minutes (Rapid)</option>
+        </select>
         <button id="btn-host" class="btn">Create Game (Play as White)</button>
         
         <div style="margin: 10px 0; color: #888;">&mdash; OR &mdash;</div>
@@ -160,8 +257,8 @@
       <div id="loading-msg" class="hidden" style="margin-top: 15px; color: #feca57;">Connecting...</div>
     </div>
 
-    <!-- Waiting for Peer (Host only) -->
-    <div id="waiting-panel" class="panel hidden">
+    <!-- Waiting for Peer -->
+    <div id="waiting-panel" class="panel menu-panel hidden">
       <h3>Waiting for opponent...</h3>
       <p style="margin: 10px 0; color: #ccc;">Share this Room Code with your friend:</p>
       <div id="room-code-display" class="code-display">----</div>
@@ -170,27 +267,65 @@
 
     <!-- Game UI -->
     <div id="game-panel" class="hidden">
-      <div class="panel" style="margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <div id="status" class="status-box" style="margin-bottom: 0;">White to move</div>
-          <button id="btn-leave" class="btn" style="padding: 6px 12px; font-size: 14px; background: #ff4757;">Leave Game</button>
+      <div class="game-layout">
+        
+        <!-- Chess Board -->
+        <div class="board-container" style="position: relative;">
+          <div id="board"></div>
+          <div id="game-over-overlay" class="hidden">
+            <div id="game-over-msg" class="game-over-text">Checkmate! White wins.</div>
+            <button id="btn-rematch" class="btn hidden">Offer Rematch</button>
+          </div>
         </div>
-        <div id="connection-status" style="font-size: 14px; text-align: left; color: #2ed573;">Connected.</div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+          
+          <!-- Opponent Card -->
+          <div class="player-card">
+            <div class="player-details">
+              <div class="player-name"><i class="fa-solid fa-user"></i> <span id="opp-name">Opponent</span></div>
+              <div id="opp-material" class="player-material"></div>
+            </div>
+            <div id="opp-clock" class="clock">--:--</div>
+          </div>
+
+          <!-- History Panel -->
+          <div class="history-panel">
+            <div class="history-header">
+              <div id="status" style="color: #feca57;">White to move</div>
+              <div id="connection-status" style="font-size: 12px; color: #2ed573;">Connected</div>
+            </div>
+            <div id="history-body" class="history-body"></div>
+            <div class="controls" style="padding: 10px; background: rgba(0,0,0,0.3);">
+              <button id="btn-draw" class="btn btn-warning btn-small">Offer Draw</button>
+              <button id="btn-resign" class="btn btn-danger btn-small">Resign</button>
+            </div>
+          </div>
+
+          <!-- My Card -->
+          <div class="player-card">
+            <div class="player-details">
+              <div class="player-name"><i class="fa-solid fa-user"></i> <span id="my-name">You</span></div>
+              <div id="my-material" class="player-material"></div>
+            </div>
+            <div id="my-clock" class="clock">--:--</div>
+          </div>
+          
+          <button id="btn-leave" class="btn btn-danger" style="margin-top: 10px;">Leave Game</button>
+        </div>
       </div>
-      
-      <div id="board"></div>
     </div>
 
   </div>
 
-  <!-- Dependencies -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
   <script>
-    // Elements
+    // --- UI Elements ---
     const menuPanel = document.getElementById('menu-panel');
     const waitingPanel = document.getElementById('waiting-panel');
     const gamePanel = document.getElementById('game-panel');
@@ -199,7 +334,15 @@
     const connStatusEl = document.getElementById('connection-status');
     const loadingMsg = document.getElementById('loading-msg');
     
-    // State
+    const oppClockEl = document.getElementById('opp-clock');
+    const myClockEl = document.getElementById('my-clock');
+    const oppMaterialEl = document.getElementById('opp-material');
+    const myMaterialEl = document.getElementById('my-material');
+    const historyBody = document.getElementById('history-body');
+    const gameOverOverlay = document.getElementById('game-over-overlay');
+    const gameOverMsg = document.getElementById('game-over-msg');
+
+    // --- State ---
     let board = null;
     let game = new Chess();
     let myColor = 'w';
@@ -207,13 +350,23 @@
     let conn = null;
     let connectTimeout = null;
     let isReconnecting = false;
-
-    // Persistent State Management
-    let session = JSON.parse(localStorage.getItem('p2p_chess_state')) || null;
     
+    // Timer State
+    let clockInterval = null;
+    
+    let session = JSON.parse(localStorage.getItem('p2p_chess_state')) || null;
+
     function saveSession() {
       if (session) {
         session.fen = game.fen();
+        session.pgn = game.pgn();
+        if (session.timeControl !== 'unlimited' && !game.game_over() && session.lastMoveTime) {
+          const now = Date.now();
+          const elapsed = (now - session.lastMoveTime) / 1000;
+          if (game.turn() === 'w') session.wTime = Math.max(0, session.wTime - elapsed);
+          else session.bTime = Math.max(0, session.bTime - elapsed);
+          session.lastMoveTime = now;
+        }
         localStorage.setItem('p2p_chess_state', JSON.stringify(session));
       }
     }
@@ -227,61 +380,104 @@
       return Math.random().toString(36).substr(2, 5).toUpperCase();
     }
 
-    // Auto-reconnect on load
+    // --- Timers ---
+    function formatTime(seconds) {
+      if (isNaN(seconds)) return "--:--";
+      seconds = Math.max(0, Math.ceil(seconds));
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function startClocks() {
+      if (clockInterval) clearInterval(clockInterval);
+      if (!session || session.timeControl === 'unlimited') {
+        myClockEl.innerText = "--:--";
+        oppClockEl.innerText = "--:--";
+        myClockEl.classList.remove('active', 'low-time');
+        oppClockEl.classList.remove('active', 'low-time');
+        return;
+      }
+
+      clockInterval = setInterval(() => {
+        if (game.game_over()) {
+          clearInterval(clockInterval);
+          return;
+        }
+        
+        const now = Date.now();
+        const elapsed = (now - session.lastMoveTime) / 1000;
+        
+        let curW = session.wTime;
+        let curB = session.bTime;
+        
+        if (game.turn() === 'w') curW -= elapsed;
+        else curB -= elapsed;
+        
+        if (curW <= 0) { curW = 0; handleTimeout('w'); }
+        if (curB <= 0) { curB = 0; handleTimeout('b'); }
+
+        const myTime = myColor === 'w' ? curW : curB;
+        const oppTime = myColor === 'w' ? curB : curW;
+
+        myClockEl.innerText = formatTime(myTime);
+        oppClockEl.innerText = formatTime(oppTime);
+        
+        myClockEl.classList.toggle('active', game.turn() === myColor);
+        oppClockEl.classList.toggle('active', game.turn() !== myColor);
+        myClockEl.classList.toggle('low-time', myTime < 30 && myTime > 0);
+        oppClockEl.classList.toggle('low-time', oppTime < 30 && oppTime > 0);
+      }, 100);
+    }
+
+    function handleTimeout(colorLost) {
+      clearInterval(clockInterval);
+      const winner = colorLost === 'w' ? 'Black' : 'White';
+      showGameOver(`${winner} wins on time.`);
+      if (conn && conn.open) {
+        conn.send({ type: 'timeout', loser: colorLost });
+      }
+    }
+
+    // --- Networking ---
     window.onload = () => {
       if (session) {
         isReconnecting = true;
         menuPanel.classList.add('hidden');
         gamePanel.classList.remove('hidden');
-        game.load(session.fen);
+        game.load_pgn(session.pgn || ""); // Try load pgn for history, fallback fen
+        if(!game.pgn()) game.load(session.fen);
         myColor = session.myColor;
         
-        connStatusEl.innerText = "Reconnecting to game...";
+        connStatusEl.innerText = "Reconnecting...";
         connStatusEl.style.color = "#feca57";
         
         initBoard();
+        updateUI();
         initPeer(session.myId);
         
         peer.on('open', () => {
           if (session.role === 'host') {
-            connStatusEl.innerText = "Waiting for opponent to reconnect...";
+            connStatusEl.innerText = "Waiting for opponent...";
           } else {
             connectToHost(session.targetId, true);
           }
         });
-        
         setupPeerHostEvents();
       }
     };
 
     function initPeer(id = null) {
-      if (peer) {
-        peer.destroy();
-      }
+      if (peer) peer.destroy();
       peer = new Peer(id, { debug: 2 });
       
       peer.on('error', (err) => {
         if (err.type === 'unavailable-id') {
-          if (session && session.myId === id) {
-            connStatusEl.innerText = "Reconnecting (ID blocked)...";
-            setTimeout(() => initPeer(id), 3000);
-          } else {
-            document.getElementById('btn-host').click(); 
-          }
+          if (session && session.myId === id) setTimeout(() => initPeer(id), 3000);
+          else document.getElementById('btn-host').click(); 
         } else if (err.type === 'peer-unavailable') {
-          if (session && session.role === 'join') {
-            connStatusEl.innerText = "Host offline. Retrying...";
-            setTimeout(() => connectToHost(session.targetId, true), 3000);
-          } else if (!session) {
-            alert("Room code not found.");
-            resetToMenu();
-          }
-        } else {
-          console.error("Peer error:", err);
-          if (!session) {
-            alert("Connection error: " + err.type);
-            resetToMenu();
-          }
+          if (session && session.role === 'join') setTimeout(() => connectToHost(session.targetId, true), 3000);
+          else if (!session) { alert("Room not found."); resetToMenu(); }
         }
       });
       return peer;
@@ -289,15 +485,13 @@
 
     function setupPeerHostEvents() {
       peer.on('connection', (connection) => {
-        if (conn && conn.open) {
-          conn.close();
-        }
+        if (conn && conn.open) conn.close();
         conn = connection;
         conn.on('open', () => {
           setupConnection();
-          if (isReconnecting || session) {
-            // Send current board state to joining peer to force sync
-            conn.send({ type: 'sync', fen: game.fen() });
+          if (isReconnecting) {
+            // Force sync
+            conn.send({ type: 'sync', state: session });
             connStatusEl.innerText = "Opponent reconnected.";
             connStatusEl.style.color = "#2ed573";
           } else {
@@ -307,18 +501,23 @@
       });
     }
 
-    // --- Host Logic ---
     document.getElementById('btn-host').addEventListener('click', () => {
       loadingMsg.classList.remove('hidden');
       document.getElementById('btn-host').disabled = true;
       document.getElementById('btn-join').disabled = true;
       
+      const tc = document.getElementById('time-control').value;
       const hostId = "CHESS-" + generateId();
       initPeer(hostId);
       setupPeerHostEvents();
       
       peer.on('open', (id) => {
-        session = { role: 'host', myId: id, targetId: null, myColor: 'w', fen: game.fen() };
+        session = { 
+          role: 'host', myId: id, targetId: null, myColor: 'w', 
+          fen: game.fen(), pgn: game.pgn(),
+          timeControl: tc, wTime: tc !== 'unlimited' ? parseInt(tc) : null, bTime: tc !== 'unlimited' ? parseInt(tc) : null,
+          lastMoveTime: null
+        };
         saveSession();
         
         menuPanel.classList.add('hidden');
@@ -327,19 +526,14 @@
       });
     });
 
-    // --- Join Logic ---
     document.getElementById('btn-join').addEventListener('click', () => {
       const code = document.getElementById('input-code').value.trim().toUpperCase();
-      if (!code) return alert("Please enter a code");
-      
+      if (!code) return;
       loadingMsg.classList.remove('hidden');
-      document.getElementById('btn-host').disabled = true;
-      document.getElementById('btn-join').disabled = true;
-      
       const myId = "CHESS-J-" + generateId();
       initPeer(myId);
-
       peer.on('open', () => {
+        // Will get true session data upon sync
         session = { role: 'join', myId: myId, targetId: "CHESS-" + code, myColor: 'b', fen: game.fen() };
         saveSession();
         connectToHost(code, false);
@@ -347,32 +541,20 @@
     });
 
     document.getElementById('btn-leave').addEventListener('click', () => {
-      if (confirm("Are you sure you want to leave the game? This will abandon the match.")) {
-        clearSession();
-        resetToMenu();
-      }
+      if (confirm("Abandon the match?")) { clearSession(); resetToMenu(); }
     });
 
     function connectToHost(code, reconnecting = false) {
       const targetId = code.startsWith("CHESS-") ? code : "CHESS-" + code;
       conn = peer.connect(targetId, { reliable: true });
-      
-      if (!reconnecting) {
-        connectTimeout = setTimeout(() => {
-          alert("Connection timed out.");
-          clearSession();
-          resetToMenu();
-        }, 10000);
-      }
+      if (!reconnecting) connectTimeout = setTimeout(() => { alert("Timed out."); clearSession(); resetToMenu(); }, 10000);
       
       conn.on('open', () => {
         clearTimeout(connectTimeout);
         setupConnection();
         if (reconnecting) {
-          connStatusEl.innerText = "Reconnected to host.";
+          connStatusEl.innerText = "Reconnected.";
           connStatusEl.style.color = "#2ed573";
-        } else {
-          startGame('b');
         }
       });
     }
@@ -382,19 +564,45 @@
         if (data.type === 'move') {
           game.move(data.move);
           board.position(game.fen());
+          session.wTime = data.wTime; session.bTime = data.bTime; session.lastMoveTime = Date.now();
+          highlightMove(data.move);
           saveSession();
-          updateStatus();
+          updateUI();
         } else if (data.type === 'sync') {
-          game.load(data.fen);
+          // Joiner syncs from host
+          const s = data.state;
+          session.timeControl = s.timeControl; session.wTime = s.wTime; session.bTime = s.bTime; session.lastMoveTime = s.lastMoveTime;
+          game.load_pgn(s.pgn || "");
           board.position(game.fen());
+          if (!isReconnecting) startGame('b', false);
+          
+          // Apply highlight from history if exists
+          const history = game.history({verbose: true});
+          if(history.length > 0) highlightMove(history[history.length-1]);
+          
           saveSession();
-          updateStatus();
+          updateUI();
+        } else if (data.type === 'resign') {
+          showGameOver(`Opponent resigned. You win!`);
+        } else if (data.type === 'draw_offer') {
+          if(confirm("Opponent offers a draw. Accept?")) {
+            conn.send({type: 'draw_accept'});
+            showGameOver("Game drawn by agreement.");
+          } else {
+            conn.send({type: 'draw_decline'});
+          }
+        } else if (data.type === 'draw_accept') {
+          showGameOver("Draw offer accepted.");
+        } else if (data.type === 'draw_decline') {
+          alert("Draw offer declined.");
+        } else if (data.type === 'timeout') {
+          handleTimeout(data.loser);
         }
       });
       
       conn.on('close', () => {
         if (session) {
-          connStatusEl.innerText = "Opponent disconnected. Waiting...";
+          connStatusEl.innerText = "Opponent disconnected...";
           connStatusEl.style.color = "#ff4757";
         }
       });
@@ -402,29 +610,25 @@
 
     function resetToMenu() {
       clearTimeout(connectTimeout);
+      clearInterval(clockInterval);
       isReconnecting = false;
       menuPanel.classList.remove('hidden');
       waitingPanel.classList.add('hidden');
       gamePanel.classList.add('hidden');
       loadingMsg.classList.add('hidden');
-      document.getElementById('btn-host').disabled = false;
-      document.getElementById('btn-join').disabled = false;
+      gameOverOverlay.classList.add('hidden');
       
       if (conn) { conn.close(); conn = null; }
       if (peer) { peer.destroy(); peer = null; }
-      
-      if (board && typeof board.destroy === 'function') {
-        try { board.destroy(); } catch(e) {}
-      }
+      if (board && typeof board.destroy === 'function') { try { board.destroy(); } catch(e) {} }
       
       const boardEl = document.getElementById('board');
       if (boardEl) boardEl.innerHTML = '';
-      
       board = null;
       $(window).off('resize');
     }
 
-    // --- Game Logic ---
+    // --- Game UI Logic ---
     function initBoard() {
       const config = {
         draggable: true,
@@ -435,63 +639,80 @@
         onSnapEnd: onSnapEnd,
         pieceTheme: 'img/chesspieces/wikipedia/{piece}.png'
       };
-      
-      if (board && typeof board.destroy === 'function') {
-        try { board.destroy(); } catch(e) {}
-      }
-      
+      if (board && typeof board.destroy === 'function') try { board.destroy(); } catch(e) {}
       board = Chessboard('board', config);
       $(window).off('resize').on('resize', board.resize);
-      updateStatus();
     }
 
-    function startGame(color) {
+    function startGame(color, isHost = true) {
       myColor = color;
       isReconnecting = false;
       menuPanel.classList.add('hidden');
       waitingPanel.classList.add('hidden');
       gamePanel.classList.remove('hidden');
+      gameOverOverlay.classList.add('hidden');
       
-      game.reset();
+      if (isHost) {
+        game.reset();
+        session.lastMoveTime = Date.now();
+        // Send initial sync
+        if (conn && conn.open) conn.send({ type: 'sync', state: session });
+      }
       saveSession();
       initBoard();
+      updateUI();
       
-      connStatusEl.innerText = "Connected to opponent.";
+      connStatusEl.innerText = "Connected.";
       connStatusEl.style.color = "#2ed573";
     }
 
     function onDragStart(source, piece, position, orientation) {
       if (game.game_over()) return false;
       if (!conn || !conn.open) return false;
+      if ((game.turn() === 'w' && piece.search(/^b/) !== -1) || (game.turn() === 'b' && piece.search(/^w/) !== -1)) return false;
+      if (game.turn() !== myColor) return false;
       
-      if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-          (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
-        return false;
-      }
-      
-      if (game.turn() !== myColor) {
-        return false;
-      }
+      // Show legal moves
+      const moves = game.moves({ square: source, verbose: true });
+      moves.forEach(m => {
+        const sq = $('#board .square-' + m.to);
+        if (game.get(m.to)) sq.append('<div class="capture-dot"></div>');
+        else sq.append('<div class="legal-dot"></div>');
+      });
     }
 
     function onDrop(source, target) {
-      const move = game.move({
-        from: source,
-        to: target,
-        promotion: 'q'
-      });
-
+      $('#board .square-55d63 .legal-dot, #board .square-55d63 .capture-dot').remove();
+      
+      const move = game.move({ from: source, to: target, promotion: 'q' });
       if (move === null) return 'snapback';
 
-      saveSession();
-      updateStatus();
-      if (conn && conn.open) {
-        conn.send({ type: 'move', move: move });
+      if (session.timeControl !== 'unlimited') {
+        const now = Date.now();
+        const elapsed = (now - session.lastMoveTime) / 1000;
+        if (myColor === 'w') session.wTime -= elapsed; else session.bTime -= elapsed;
+        session.lastMoveTime = now;
       }
+
+      highlightMove(move);
+      saveSession();
+      updateUI();
+      if (conn && conn.open) conn.send({ type: 'move', move: move, wTime: session.wTime, bTime: session.bTime });
     }
 
-    function onSnapEnd() {
-      board.position(game.fen());
+    function onSnapEnd() { board.position(game.fen()); }
+
+    function highlightMove(move) {
+      $('#board .square-55d63').removeClass('highlight-last');
+      $('#board .square-' + move.from).addClass('highlight-last');
+      $('#board .square-' + move.to).addClass('highlight-last');
+    }
+
+    function updateUI() {
+      updateStatus();
+      updateHistory();
+      updateMaterial();
+      startClocks();
     }
 
     function updateStatus() {
@@ -499,24 +720,86 @@
       let moveColor = game.turn() === 'w' ? 'White' : 'Black';
 
       if (game.in_checkmate()) {
-        statusHTML = `Game over, ${moveColor} is in checkmate.`;
+        statusHTML = `Checkmate.`;
+        showGameOver(`${moveColor} is in checkmate!`);
       } else if (game.in_draw()) {
-        statusHTML = 'Game over, drawn position';
+        statusHTML = 'Drawn position.';
+        showGameOver(`Game drawn.`);
       } else {
         statusHTML = `${moveColor} to move`;
-        if (game.in_check()) {
-          statusHTML += ', ' + moveColor + ' is in check';
-        }
+        if (game.in_check()) statusHTML += ' (Check)';
       }
-
       statusEl.innerText = statusHTML;
+    }
+
+    function updateHistory() {
+      const history = game.history();
+      let html = '';
+      for (let i = 0; i < history.length; i += 2) {
+        html += `<div class="history-turn">${(i/2)+1}.</div>`;
+        html += `<div class="history-move">${history[i]}</div>`;
+        if (history[i+1]) html += `<div class="history-move">${history[i+1]}</div>`;
+        else html += `<div></div>`;
+      }
+      historyBody.innerHTML = html;
+      historyBody.scrollTop = historyBody.scrollHeight;
+    }
+
+    const pieceValues = { 'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0 };
+    function updateMaterial() {
+      const fen = game.fen().split(' ')[0];
+      let wCount = {'p':8,'n':2,'b':2,'r':2,'q':1};
+      let bCount = {'p':8,'n':2,'b':2,'r':2,'q':1};
       
-      if (game.turn() === myColor) {
-        statusEl.style.color = '#2ed573';
+      for(let i=0; i<fen.length; i++) {
+        let c = fen[i];
+        if (/[pnbrq]/.test(c)) bCount[c]--;
+        if (/[PNBRQ]/.test(c)) wCount[c.toLowerCase()]--;
+      }
+      
+      let wScore = 0; let bScore = 0;
+      let wCapHtml = ''; let bCapHtml = '';
+      
+      for (let p in wCount) {
+        for(let j=0; j<wCount[p]; j++) { wScore += pieceValues[p]; bCapHtml += `<i class="fa-solid fa-chess-${p === 'p' ? 'pawn' : p === 'n' ? 'knight' : p === 'b' ? 'bishop' : p === 'r' ? 'rook' : 'queen'}"></i> `; }
+      }
+      for (let p in bCount) {
+        for(let j=0; j<bCount[p]; j++) { bScore += pieceValues[p]; wCapHtml += `<i class="fa-solid fa-chess-${p === 'p' ? 'pawn' : p === 'n' ? 'knight' : p === 'b' ? 'bishop' : p === 'r' ? 'rook' : 'queen'}"></i> `; }
+      }
+      
+      const wAdv = wScore - bScore;
+      const bAdv = bScore - wScore;
+      
+      if (wAdv > 0) wCapHtml += ` <span style="color:#2ed573">+${wAdv}</span>`;
+      if (bAdv > 0) bCapHtml += ` <span style="color:#2ed573">+${bAdv}</span>`;
+
+      if (myColor === 'w') {
+        myMaterialEl.innerHTML = wCapHtml; oppMaterialEl.innerHTML = bCapHtml;
       } else {
-        statusEl.style.color = '#feca57';
+        myMaterialEl.innerHTML = bCapHtml; oppMaterialEl.innerHTML = wCapHtml;
       }
     }
+
+    function showGameOver(msg) {
+      gameOverOverlay.classList.remove('hidden');
+      gameOverMsg.innerText = msg;
+      clearInterval(clockInterval);
+    }
+
+    // --- Buttons ---
+    document.getElementById('btn-resign').addEventListener('click', () => {
+      if (!game.game_over() && confirm("Resign the game?")) {
+        showGameOver("You resigned.");
+        if (conn && conn.open) conn.send({type: 'resign'});
+      }
+    });
+
+    document.getElementById('btn-draw').addEventListener('click', () => {
+      if (!game.game_over()) {
+        alert("Draw offer sent.");
+        if (conn && conn.open) conn.send({type: 'draw_offer'});
+      }
+    });
 
   </script>
 </body>
