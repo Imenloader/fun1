@@ -23,14 +23,51 @@ async function loadGamePage() {
 
     const btn = document.getElementById('fullscreen-btn');
     const container = document.getElementById('game-container');
+    const iframe = document.getElementById('game-iframe');
+    
     if (btn && container) {
       btn.addEventListener('click', () => {
         container.classList.toggle('theater-mode');
         if (container.classList.contains('theater-mode')) {
           btn.innerText = '⛶ Exit Theater';
+          container.style.height = ''; // remove inline height
         } else {
           btn.innerText = '⛶ Fullscreen';
+          resizeIframe(); // restore calculated height
         }
+      });
+    }
+
+    // Auto-resize logic
+    const resizeIframe = () => {
+      if (!container || container.classList.contains('theater-mode')) return;
+      try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        if (!iframeDoc) return;
+        // Use the inner .container if it exists, otherwise fallback to body
+        const innerContainer = iframeDoc.querySelector('.container') || iframeDoc.body;
+        // We add a little padding buffer to prevent scrollbars
+        const newHeight = innerContainer.scrollHeight + 50; 
+        container.style.height = Math.max(newHeight, 600) + 'px';
+      } catch (e) {
+        // Cross-origin or not ready
+      }
+    };
+
+    if (iframe) {
+      iframe.addEventListener('load', () => {
+        resizeIframe();
+        try {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          if (iframeDoc && typeof ResizeObserver !== 'undefined') {
+            const ro = new ResizeObserver(() => resizeIframe());
+            ro.observe(iframeDoc.body);
+            const inner = iframeDoc.querySelector('.container');
+            if (inner) ro.observe(inner);
+          } else {
+            setInterval(resizeIframe, 1000);
+          }
+        } catch (e) {}
       });
     }
 
