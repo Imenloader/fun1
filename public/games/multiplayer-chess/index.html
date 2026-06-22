@@ -103,7 +103,7 @@
     .board-container {
       flex: 1;
       min-width: 300px;
-      max-width: 500px;
+      max-width: 420px;
     }
     
     #board {
@@ -252,6 +252,14 @@
           <input type="text" id="input-code" placeholder="Enter Room Code" autocomplete="off">
           <button id="btn-join" class="btn">Join (Play as Black)</button>
         </div>
+
+        <div style="margin: 15px 0 5px 0; color: #888;">&mdash; OR &mdash;</div>
+        
+        <div class="input-group" style="flex-direction: column; gap: 8px;">
+          <label for="ai-level" style="font-size: 14px; text-align: left; color: #ccc;">AI Difficulty: Level <span id="ai-level-val">10</span></label>
+          <input type="range" id="ai-level" min="1" max="20" value="10" style="width: 100%; cursor: pointer;">
+          <button id="btn-ai" class="btn" style="background-color: #feca57; color: #111;">Play vs AI</button>
+        </div>
       </div>
       
       <div id="loading-msg" class="hidden" style="margin-top: 15px; color: #feca57;">Connecting...</div>
@@ -325,7 +333,60 @@
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
   <script>
-    // --- UI Elements ---
+    let aiWorker = null;
+    let isAI = false;
+    let aiLevel = 10;
+    
+    // --- Stockfish AI ---
+    function initAI(level) {
+      isAI = true;
+      aiLevel = level;
+      if (aiWorker) aiWorker.terminate();
+      aiWorker = new Worker('stockfish.js');
+      
+      aiWorker.onmessage = function(event) {
+        const line = event.data;
+        if (line.startsWith('bestmove')) {
+          const moveStr = line.split(' ')[1];
+          if (moveStr && moveStr !== '(none)') {
+            // Stockfish returns moves like "e2e4" or "e7e8q"
+            const source = moveStr.substring(0, 2);
+            const target = moveStr.substring(2, 4);
+            const promotion = moveStr.length > 4 ? moveStr.charAt(4) : 'q';
+            
+            const move = game.move({ from: source, to: target, promotion: promotion });
+            if (move) {
+              board.position(game.fen());
+              highlightMove(move);
+              
+              if (session.timeControl !== 'unlimited') {
+                const now = Date.now();
+                const elapsed = (now - session.lastMoveTime) / 1000;
+                session.bTime -= elapsed; // AI is always black
+                session.lastMoveTime = now;
+              }
+              
+              saveSession();
+              updateUI();
+            }
+          }
+        }
+      };
+      
+      aiWorker.postMessage('uci');
+      // Stockfish Skill Level is 0-20
+      aiWorker.postMessage('setoption name Skill Level value ' + level);
+    }
+    
+    function makeAIMove() {
+      if (game.game_over() || !isAI) return;
+      aiWorker.postMessage('position fen ' + game.fen());
+      // Depth scales with difficulty: level 1 = depth 1, level 20 = depth 10
+      const depth = Math.max(1, Math.ceil(aiLevel / 2));
+      aiWorker.postMessage('go depth ' + depth);
+    }
+
+    // --- State Management ---
     const menuPanel = document.getElementById('menu-panel');
     const waitingPanel = document.getElementById('waiting-panel');
     const gamePanel = document.getElementById('game-panel');
@@ -360,13 +421,6 @@
       if (session) {
         session.fen = game.fen();
         session.pgn = game.pgn();
-        if (session.timeControl !== 'unlimited' && !game.game_over() && session.lastMoveTime) {
-          const now = Date.now();
-          const elapsed = (now - session.lastMoveTime) / 1000;
-          if (game.turn() === 'w') session.wTime = Math.max(0, session.wTime - elapsed);
-          else session.bTime = Math.max(0, session.bTime - elapsed);
-          session.lastMoveTime = now;
-        }
         localStorage.setItem('p2p_chess_state', JSON.stringify(session));
       }
     }
@@ -400,8 +454,8 @@
       }
 
       clockInterval = setInterval(() => {
-        if (game.game_over()) {
-          clearInterval(clockInterval);
+        if (game.game_over() || !session.lastMoveTime) {
+          if (game.game_over()) clearInterval(clockInterval);
           return;
         }
         
@@ -454,16 +508,25 @@
         
         initBoard();
         updateUI();
-        initPeer(session.myId);
         
-        peer.on('open', () => {
-          if (session.role === 'host') {
-            connStatusEl.innerText = "Waiting for opponent...";
-          } else {
-            connectToHost(session.targetId, true);
-          }
-        });
-        setupPeerHostEvents();
+        if (session.myId === 'AI-GAME') {
+          document.getElementById('opp-name').innerText = "Stockfish Lvl " + (session.aiLevel || 10);
+          document.getElementById('connection-status').innerText = "Local AI";
+          document.getElementById('connection-status').style.color = "#a55eea";
+          initAI(session.aiLevel || 10);
+          // If it's Black's turn (AI), trigger it
+          if (game.turn() === 'b' && !game.game_over()) makeAIMove();
+        } else {
+          initPeer(session.myId);
+          peer.on('open', () => {
+            if (session.role === 'host') {
+              connStatusEl.innerText = "Waiting for opponent...";
+            } else {
+              connectToHost(session.targetId, true);
+            }
+          });
+          setupPeerHostEvents();
+        }
       }
     };
 
@@ -495,6 +558,9 @@
             connStatusEl.innerText = "Opponent reconnected.";
             connStatusEl.style.color = "#2ed573";
           } else {
+            // When joiner connects for the first time, officially start clocks
+            session.lastMoveTime = Date.now();
+            saveSession();
             startGame('w');
           }
         });
@@ -524,6 +590,43 @@
         waitingPanel.classList.remove('hidden');
         roomCodeDisplay.innerText = id.replace('CHESS-', '');
       });
+    });
+
+    document.getElementById('ai-level').addEventListener('input', (e) => {
+      document.getElementById('ai-level-val').innerText = e.target.value;
+    });
+
+    document.getElementById('btn-ai').addEventListener('click', () => {
+      const tc = document.getElementById('time-control').value;
+      const level = parseInt(document.getElementById('ai-level').value, 10);
+      
+      session = { 
+        role: 'host', 
+        myId: 'AI-GAME',
+        myColor: 'w', 
+        fen: 'start',
+        pgn: '',
+        timeControl: tc,
+        wTime: tc === 'unlimited' ? 0 : parseInt(tc),
+        bTime: tc === 'unlimited' ? 0 : parseInt(tc),
+        lastMoveTime: null,
+        aiLevel: level
+      };
+      saveSession();
+      
+      menuPanel.classList.add('hidden');
+      waitingPanel.classList.add('hidden');
+      gamePanel.classList.remove('hidden');
+      
+      initAI(level);
+      
+      session.lastMoveTime = Date.now();
+      saveSession();
+      startGame('w');
+      
+      document.getElementById('opp-name').innerText = "Stockfish Lvl " + level;
+      document.getElementById('connection-status').innerText = "Local AI";
+      document.getElementById('connection-status').style.color = "#a55eea";
     });
 
     document.getElementById('btn-join').addEventListener('click', () => {
@@ -612,6 +715,9 @@
       clearTimeout(connectTimeout);
       clearInterval(clockInterval);
       isReconnecting = false;
+      isAI = false;
+      if (aiWorker) { aiWorker.terminate(); aiWorker = null; }
+      
       menuPanel.classList.remove('hidden');
       waitingPanel.classList.add('hidden');
       gamePanel.classList.add('hidden');
@@ -697,7 +803,12 @@
       highlightMove(move);
       saveSession();
       updateUI();
-      if (conn && conn.open) conn.send({ type: 'move', move: move, wTime: session.wTime, bTime: session.bTime });
+      
+      if (isAI) {
+        if (!game.game_over()) makeAIMove();
+      } else if (conn && conn.open) {
+        conn.send({ type: 'move', move: move, wTime: session.wTime, bTime: session.bTime });
+      }
     }
 
     function onSnapEnd() { board.position(game.fen()); }
