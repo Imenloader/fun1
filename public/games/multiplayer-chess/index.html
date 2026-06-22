@@ -328,7 +328,8 @@
         </div>
       </div>
       
-      <div id="loading-msg" class="hidden" style="margin-top: 15px; color: #feca57;">Connecting...</div>
+      <div id="loading-msg" class="hidden" style="margin-top: 15px; color: #feca57;"><i class="fa-solid fa-spinner fa-spin"></i> Connecting...</div>
+      <div id="error-msg" class="hidden" style="margin-top: 15px; color: #ff4757; font-weight: bold; background: rgba(255,71,87,0.1); padding: 10px; border-radius: 6px; border: 1px solid #ff4757;"></div>
     </div>
 
     <!-- Waiting for Peer -->
@@ -651,7 +652,7 @@
           if (session && session.role === 'join') {
             if (!isReconnecting && gamePanel.classList.contains('hidden')) {
               // Fast-fail if the initial connection target is offline/invalid
-              alert("Room not found or Host is offline.");
+              showMenuError("Room not found or Host is offline.");
               resetToMenu();
             } else {
               connStatusEl.innerText = "Host offline. Retrying...";
@@ -659,11 +660,11 @@
               retryTimeout = setTimeout(() => connectToHost(session.targetId, true), 3000);
             }
           }
-          else if (!session) { alert("Room not found."); resetToMenu(); }
+          else if (!session) { showMenuError("Room not found."); resetToMenu(); }
         } else {
           // Handle other network/server errors
           if (!isReconnecting && gamePanel.classList.contains('hidden')) {
-            alert("Network error: " + err.type);
+            showMenuError("Network error: " + err.type);
             resetToMenu();
           }
         }
@@ -780,7 +781,13 @@
       conn = peer.connect(targetId, { reliable: true });
       setupConnection();
       
-      if (!reconnecting) connectTimeout = setTimeout(() => { alert("Timed out."); clearSession(); resetToMenu(); }, 10000);
+      if (!reconnecting) {
+        connectTimeout = setTimeout(() => { 
+          showMenuError("Connection timed out. The host may have disconnected or a strict firewall blocked the WebRTC channel.");
+          clearSession(); 
+          resetToMenu(); 
+        }, 45000); // Increased to 45 seconds
+      }
       
       conn.on('open', () => {
         clearTimeout(connectTimeout);
@@ -902,10 +909,13 @@
       menuPanel.classList.remove('hidden');
       waitingPanel.classList.add('hidden');
       gamePanel.classList.add('hidden');
+      document.getElementById('btn-host').disabled = false;
+      document.getElementById('btn-join').disabled = false;
       loadingMsg.classList.add('hidden');
       gameOverOverlay.classList.add('hidden');
       
-      if (conn) { conn.close(); conn = null; }
+      if (conn && conn.open) conn.close();
+      conn = null;
       if (peer) { peer.destroy(); peer = null; }
       if (board && typeof board.destroy === 'function') { try { board.destroy(); } catch(e) {} }
       
@@ -913,6 +923,17 @@
       if (boardEl) boardEl.innerHTML = '';
       board = null;
       $(window).off('resize');
+    }
+
+    function showMenuError(msg) {
+      const loadingMsg = document.getElementById('loading-msg');
+      const errorMsgEl = document.getElementById('error-msg');
+      if(loadingMsg) loadingMsg.classList.add('hidden');
+      if(errorMsgEl) {
+        errorMsgEl.innerText = msg;
+        errorMsgEl.classList.remove('hidden');
+        setTimeout(() => { errorMsgEl.classList.add('hidden'); }, 6000);
+      }
     }
 
     // --- Game UI Logic ---
