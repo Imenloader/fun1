@@ -336,6 +336,7 @@
     let aiWorker = null;
     let isAI = false;
     let aiLevel = 10;
+    let isGameOver = false;
     
     // --- Stockfish AI ---
     function initAI(level) {
@@ -379,7 +380,7 @@
     }
     
     function makeAIMove() {
-      if (game.game_over() || !isAI) return;
+      if (game.game_over() || isGameOver || !isAI) return;
       aiWorker.postMessage('position fen ' + game.fen());
       // Depth scales with difficulty: level 1 = depth 1, level 20 = depth 10
       const depth = Math.max(1, Math.ceil(aiLevel / 2));
@@ -454,8 +455,8 @@
       }
 
       clockInterval = setInterval(() => {
-        if (game.game_over() || !session.lastMoveTime) {
-          if (game.game_over()) clearInterval(clockInterval);
+        if (game.game_over() || isGameOver || !session.lastMoveTime) {
+          if (game.game_over() || isGameOver) clearInterval(clockInterval);
           return;
         }
         
@@ -716,6 +717,7 @@
       clearInterval(clockInterval);
       isReconnecting = false;
       isAI = false;
+      isGameOver = false;
       if (aiWorker) { aiWorker.terminate(); aiWorker = null; }
       
       menuPanel.classList.remove('hidden');
@@ -753,6 +755,7 @@
     function startGame(color, isHost = true) {
       myColor = color;
       isReconnecting = false;
+      isGameOver = false;
       menuPanel.classList.add('hidden');
       waitingPanel.classList.add('hidden');
       gamePanel.classList.remove('hidden');
@@ -773,8 +776,8 @@
     }
 
     function onDragStart(source, piece, position, orientation) {
-      if (game.game_over()) return false;
-      if (!conn || !conn.open) return false;
+      if (game.game_over() || isGameOver) return false;
+      if (!isAI && (!conn || !conn.open)) return false;
       if ((game.turn() === 'w' && piece.search(/^b/) !== -1) || (game.turn() === 'b' && piece.search(/^w/) !== -1)) return false;
       if (game.turn() !== myColor) return false;
       
@@ -805,7 +808,7 @@
       updateUI();
       
       if (isAI) {
-        if (!game.game_over()) makeAIMove();
+        if (!game.game_over() && !isGameOver) makeAIMove();
       } else if (conn && conn.open) {
         conn.send({ type: 'move', move: move, wTime: session.wTime, bTime: session.bTime });
       }
@@ -892,23 +895,29 @@
     }
 
     function showGameOver(msg) {
+      isGameOver = true;
       gameOverOverlay.classList.remove('hidden');
       gameOverMsg.innerText = msg;
       clearInterval(clockInterval);
+      if (isAI && aiWorker) { aiWorker.terminate(); aiWorker = null; }
     }
 
     // --- Buttons ---
     document.getElementById('btn-resign').addEventListener('click', () => {
-      if (!game.game_over() && confirm("Resign the game?")) {
+      if (!game.game_over() && !isGameOver && confirm("Resign the game?")) {
         showGameOver("You resigned.");
-        if (conn && conn.open) conn.send({type: 'resign'});
+        if (!isAI && conn && conn.open) conn.send({type: 'resign'});
       }
     });
 
     document.getElementById('btn-draw').addEventListener('click', () => {
-      if (!game.game_over()) {
-        alert("Draw offer sent.");
-        if (conn && conn.open) conn.send({type: 'draw_offer'});
+      if (!game.game_over() && !isGameOver) {
+        if (isAI) {
+          alert("Stockfish rejects your draw offer.");
+        } else {
+          alert("Draw offer sent.");
+          if (conn && conn.open) conn.send({type: 'draw_offer'});
+        }
       }
     });
 
