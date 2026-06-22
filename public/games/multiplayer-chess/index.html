@@ -414,6 +414,7 @@
     let connectTimeout = null;
     let retryTimeout = null;
     let isReconnecting = false;
+    let hasSynced = false;
     
     let session = JSON.parse(localStorage.getItem('p2p_chess_state')) || null;
 
@@ -662,7 +663,20 @@
       
       conn.on('open', () => {
         clearTimeout(connectTimeout);
+        hasSynced = false;
         conn.send({ type: 'request_sync' });
+        
+        // Robust retry to handle WebRTC SCTP dropping the first packet
+        let syncAttempts = 0;
+        const syncInterval = setInterval(() => {
+          if (hasSynced || syncAttempts >= 10) {
+            clearInterval(syncInterval);
+            return;
+          }
+          if (conn && conn.open) conn.send({ type: 'request_sync' });
+          syncAttempts++;
+        }, 500);
+
         if (reconnecting) {
           connStatusEl.innerText = "Reconnected.";
           connStatusEl.style.color = "#2ed573";
@@ -681,11 +695,14 @@
           updateUI();
         } else if (data.type === 'sync') {
           // Joiner syncs from host
+          hasSynced = true;
           const s = data.state;
           session.timeControl = s.timeControl; session.wTime = s.wTime; session.bTime = s.bTime; session.lastMoveTime = s.lastMoveTime;
           game.load_pgn(s.pgn || "");
+          if (!isReconnecting && gamePanel.classList.contains('hidden')) {
+            startGame('b', false);
+          }
           board.position(game.fen());
-          if (!isReconnecting) startGame('b', false);
           
           // Apply highlight from history if exists
           const history = game.history({verbose: true});
