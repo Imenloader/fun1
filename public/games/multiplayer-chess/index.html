@@ -1037,7 +1037,8 @@
     });
 
     document.getElementById('btn-exit-home').addEventListener('click', () => {
-      window.top.location.href = '/';
+      clearSession(); 
+      resetToMenu();
     });
 
     document.getElementById('btn-draw').addEventListener('click', () => {
