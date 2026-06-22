@@ -335,6 +335,27 @@ function handleCollisions(event) {
     const bodyA = pairs[i].bodyA;
     const bodyB = pairs[i].bodyB;
 
+    // Check Arrow hits Apple
+    if ((bodyA.isArrow && bodyB.isApple) || (bodyB.isArrow && bodyA.isApple)) {
+      const apple = bodyA.isApple ? bodyA : bodyB;
+      const arrow = bodyA.isArrow ? bodyA : bodyB;
+      
+      if (arrow.owner === 'p1' && !p1.dead) {
+        playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + 20);
+        skulls += 5;
+        try { localStorage.setItem('ragdoll_skulls', skulls); } catch (e) {}
+        updateUI();
+        // Green text for heal
+        spawnDamageText(apple.position.x, apple.position.y, '+20 HP', false);
+        // We'll spawn green blood instead of red for healing visually
+        spawnBlood(apple.position.x, apple.position.y, 10);
+      }
+      
+      Composite.remove(world, apple);
+      apples = apples.filter(a => a.id !== apple.id);
+      continue;
+    }
+
     // Check Arrow hits Ragdoll
     if ((bodyA.isArrow && bodyB.partName) || (bodyB.isArrow && bodyA.partName)) {
       const arrowBody = bodyA.isArrow ? bodyA : bodyB;
