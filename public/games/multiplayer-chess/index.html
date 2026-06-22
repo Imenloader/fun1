@@ -171,8 +171,11 @@
     <!-- Game UI -->
     <div id="game-panel" class="hidden">
       <div class="panel" style="margin-bottom: 20px;">
-        <div id="status" class="status-box">White to move</div>
-        <div id="connection-status" style="font-size: 14px; color: #2ed573;">Connected.</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div id="status" class="status-box" style="margin-bottom: 0;">White to move</div>
+          <button id="btn-leave" class="btn" style="padding: 6px 12px; font-size: 14px; background: #ff4757;">Leave Game</button>
+        </div>
+        <div id="connection-status" style="font-size: 14px; text-align: left; color: #2ed573;">Connected.</div>
       </div>
       
       <div id="board"></div>
@@ -273,6 +276,12 @@
       });
     });
 
+    document.getElementById('btn-leave').addEventListener('click', () => {
+      if (confirm("Are you sure you want to leave the game?")) {
+        resetToMenu();
+      }
+    });
+
     function connectToHost(code) {
       const targetId = "CHESS-" + code;
       conn = peer.connect(targetId, { reliable: true });
@@ -308,7 +317,7 @@
       conn.on('close', () => {
         connStatusEl.innerText = "Opponent disconnected.";
         connStatusEl.style.color = "#ff4757";
-        board = null; // disable board
+        alert("The opponent has disconnected.");
       });
     }
 
@@ -322,6 +331,12 @@
       document.getElementById('btn-join').disabled = false;
       if (conn) { conn.close(); conn = null; }
       if (peer) { peer.destroy(); peer = null; }
+      
+      const boardEl = document.getElementById('board');
+      if (boardEl) boardEl.innerHTML = '';
+      if (board && typeof board.destroy === 'function') board.destroy();
+      board = null;
+      $(window).off('resize');
     }
 
     // --- Game Logic ---
@@ -344,12 +359,16 @@
       };
       
       board = Chessboard('board', config);
-      $(window).resize(board.resize);
+      $(window).off('resize').on('resize', board.resize);
+      
+      connStatusEl.innerText = "Connected to opponent.";
+      connStatusEl.style.color = "#2ed573";
       updateStatus();
     }
 
     function onDragStart(source, piece, position, orientation) {
       if (game.game_over()) return false;
+      if (!conn || !conn.open) return false;
       
       // Only pick up your own pieces, and only if it's your turn
       if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
