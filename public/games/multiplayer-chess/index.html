@@ -540,11 +540,23 @@
           else document.getElementById('btn-host').click(); 
         } else if (err.type === 'peer-unavailable') {
           if (session && session.role === 'join') {
-            connStatusEl.innerText = "Host offline. Retrying...";
-            connStatusEl.style.color = "#feca57";
-            retryTimeout = setTimeout(() => connectToHost(session.targetId, true), 3000);
+            if (!isReconnecting && gamePanel.classList.contains('hidden')) {
+              // Fast-fail if the initial connection target is offline/invalid
+              alert("Room not found or Host is offline.");
+              resetToMenu();
+            } else {
+              connStatusEl.innerText = "Host offline. Retrying...";
+              connStatusEl.style.color = "#feca57";
+              retryTimeout = setTimeout(() => connectToHost(session.targetId, true), 3000);
+            }
           }
           else if (!session) { alert("Room not found."); resetToMenu(); }
+        } else {
+          // Handle other network/server errors
+          if (!isReconnecting && gamePanel.classList.contains('hidden')) {
+            alert("Network error: " + err.type);
+            resetToMenu();
+          }
         }
       });
       return peer;
